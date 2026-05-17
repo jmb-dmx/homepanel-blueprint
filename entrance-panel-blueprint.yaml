@@ -126,7 +126,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Salon"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -136,7 +136,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Cuisine"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -146,7 +146,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "S. à Manger"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -156,7 +156,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Extérieur"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -166,7 +166,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Soir"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -176,7 +176,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Cinéma"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -186,7 +186,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Matin"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -196,7 +196,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "Bonne nuit"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -262,7 +262,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:lightbulb"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -272,7 +272,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:silverware-fork-knife"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -282,7 +282,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:sofa"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -292,7 +292,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:tree"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -302,7 +302,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:weather-night"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -312,7 +312,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:television"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -322,7 +322,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:weather-sunset-up"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -332,7 +332,7 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "mdi:bed-empty"
+    initial_value: ""
     on_value:
       then:
         - script.execute: sync_button_states
@@ -342,56 +342,56 @@ text:
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "light"
+    initial_value: ""
   - platform: template
     name: "Bouton 2 - Action"
     id: btn2_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "light"
+    initial_value: ""
   - platform: template
     name: "Bouton 3 - Action"
     id: btn3_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "light"
+    initial_value: ""
   - platform: template
     name: "Bouton 4 - Action"
     id: btn4_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "light"
+    initial_value: ""
   - platform: template
     name: "Bouton 5 - Action"
     id: btn5_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "script"
+    initial_value: ""
   - platform: template
     name: "Bouton 6 - Action"
     id: btn6_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "media_player"
+    initial_value: ""
   - platform: template
     name: "Bouton 7 - Action"
     id: btn7_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "script"
+    initial_value: ""
   - platform: template
     name: "Bouton 8 - Action"
     id: btn8_type
     mode: text
     optimistic: true
     restore_value: true
-    initial_value: "script"
+    initial_value: ""
 ################################################################################
 # Scripts
 ################################################################################
@@ -697,6 +697,7 @@ logger:
   hardware_uart: USB_SERIAL_JTAG
 api:
   on_client_connected:
+    - delay: 5s
     - homeassistant.event:
         event: esphome.entrance_panel_request_config
   services:
