@@ -183,6 +183,39 @@ blueprint:
       selector:
         select:
           options: ["light", "script", "media_player"]
+    weather_entity:
+      name: Weather Entity
+      description: "Entity for weather (e.g., weather.forecast_home)"
+      selector:
+        entity:
+          domain: weather
+    outdoor_temp_entity:
+      name: Outdoor Temperature Entity
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    media_player_1:
+      name: Media Player 1
+      selector:
+        entity:
+          domain: media_player
+    media_player_2:
+      name: Media Player 2
+      selector:
+        entity:
+          domain: media_player
+    media_player_3:
+      name: Media Player 3
+      selector:
+        entity:
+          domain: media_player
+    guest_wifi_qr:
+      name: Guest Wi-Fi QR Code String
+      description: 'Format: WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;'
+      default: "WIFI:S:;T:WPA;P:;;"
+      selector:
+        text:
 
 mode: parallel
 max: 10
@@ -198,6 +231,11 @@ variables:
   button_6_type: !input button_6_type
   button_7_type: !input button_7_type
   button_8_type: !input button_8_type
+  weather_entity: !input weather_entity
+  outdoor_temp_entity: !input outdoor_temp_entity
+  media_player_1: !input media_player_1
+  media_player_2: !input media_player_2
+  media_player_3: !input media_player_3
 
 trigger:
   - platform: homeassistant
@@ -209,6 +247,21 @@ trigger:
   - platform: event
     event_type: esphome.entrance_panel_request_config
     id: init_panel
+  - platform: state
+    entity_id: !input weather_entity
+    id: sync_weather
+  - platform: state
+    entity_id: !input outdoor_temp_entity
+    id: sync_weather
+  - platform: state
+    entity_id: !input media_player_1
+    id: sync_media_1
+  - platform: state
+    entity_id: !input media_player_2
+    id: sync_media_2
+  - platform: state
+    entity_id: !input media_player_3
+    id: sync_media_3
 
 action:
   - choose:
@@ -219,7 +272,6 @@ action:
               - condition: trigger
                 id: init_panel
         sequence:
-          - delay: 5
           - service: "esphome.{{ panel_name }}_set_button_config"
             data:
               button: 1
@@ -276,3 +328,96 @@ action:
               icon: !input button_8_icon
               action: !input button_8_type
               entity: !input button_8_entity
+          - service: "esphome.{{ panel_name }}_set_qr"
+            data:
+              qr_text: !input guest_wifi_qr
+          - service: weather.get_forecasts
+            data:
+              type: daily
+            target:
+              entity_id: "{{ weather_entity }}"
+            response_variable: weather_forecast
+          - service: "esphome.{{ panel_name }}_set_weather"
+            data:
+              cond: "{{ states(weather_entity) }}"
+              temp: "{{ states(outdoor_temp_entity) }}"
+              cond_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['condition'] if weather_forecast[weather_entity]['forecast'] else '' }}"
+              max_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['temperature'] | string if weather_forecast[weather_entity]['forecast'] else '' }}"
+              min_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['templow'] | string if weather_forecast[weather_entity]['forecast'] else '' }}"
+              cond_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['condition'] if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+              max_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['temperature'] | string if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+              min_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['templow'] | string if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 1
+              entity_id: "{{ media_player_1 }}"
+              state: "{{ states(media_player_1) }}"
+              title: "{{ state_attr(media_player_1, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_1, 'media_artist') | default('', true) }}"
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 2
+              entity_id: "{{ media_player_2 }}"
+              state: "{{ states(media_player_2) }}"
+              title: "{{ state_attr(media_player_2, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_2, 'media_artist') | default('', true) }}"
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 3
+              entity_id: "{{ media_player_3 }}"
+              state: "{{ states(media_player_3) }}"
+              title: "{{ state_attr(media_player_3, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_3, 'media_artist') | default('', true) }}"
+      - conditions:
+          - condition: trigger
+            id: sync_weather
+        sequence:
+          - service: weather.get_forecasts
+            data:
+              type: daily
+            target:
+              entity_id: "{{ weather_entity }}"
+            response_variable: weather_forecast
+          - service: "esphome.{{ panel_name }}_set_weather"
+            data:
+              cond: "{{ states(weather_entity) }}"
+              temp: "{{ states(outdoor_temp_entity) }}"
+              cond_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['condition'] if weather_forecast[weather_entity]['forecast'] else '' }}"
+              max_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['temperature'] | string if weather_forecast[weather_entity]['forecast'] else '' }}"
+              min_d1: "{{ weather_forecast[weather_entity]['forecast'][0]['templow'] | string if weather_forecast[weather_entity]['forecast'] else '' }}"
+              cond_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['condition'] if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+              max_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['temperature'] | string if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+              min_d2: "{{ weather_forecast[weather_entity]['forecast'][1]['templow'] | string if weather_forecast[weather_entity]['forecast'] and weather_forecast[weather_entity]['forecast'] | length > 1 else '' }}"
+      - conditions:
+          - condition: trigger
+            id: sync_media_1
+        sequence:
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 1
+              entity_id: "{{ media_player_1 }}"
+              state: "{{ states(media_player_1) }}"
+              title: "{{ state_attr(media_player_1, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_1, 'media_artist') | default('', true) }}"
+      - conditions:
+          - condition: trigger
+            id: sync_media_2
+        sequence:
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 2
+              entity_id: "{{ media_player_2 }}"
+              state: "{{ states(media_player_2) }}"
+              title: "{{ state_attr(media_player_2, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_2, 'media_artist') | default('', true) }}"
+      - conditions:
+          - condition: trigger
+            id: sync_media_3
+        sequence:
+          - service: "esphome.{{ panel_name }}_set_media"
+            data:
+              player: 3
+              entity_id: "{{ media_player_3 }}"
+              state: "{{ states(media_player_3) }}"
+              title: "{{ state_attr(media_player_3, 'media_title') | default('', true) }}"
+              artist: "{{ state_attr(media_player_3, 'media_artist') | default('', true) }}"

@@ -116,6 +116,69 @@ globals:
     type: int
     initial_value: '6'
     restore_value: true
+  - id: weather_cond
+    type: std::string
+    initial_value: '""'
+  - id: weather_temp
+    type: std::string
+    initial_value: '""'
+  - id: weather_cond_demain
+    type: std::string
+    initial_value: '""'
+  - id: weather_max_demain
+    type: std::string
+    initial_value: '""'
+  - id: weather_min_demain
+    type: std::string
+    initial_value: '""'
+  - id: weather_cond_apres_demain
+    type: std::string
+    initial_value: '""'
+  - id: weather_max_apres_demain
+    type: std::string
+    initial_value: '""'
+  - id: weather_min_apres_demain
+    type: std::string
+    initial_value: '""'
+  - id: media_1_title
+    type: std::string
+    initial_value: '""'
+  - id: media_1_artist
+    type: std::string
+    initial_value: '""'
+  - id: media_1_state
+    type: std::string
+    initial_value: '""'
+  - id: media_1_entity_id
+    type: std::string
+    initial_value: '""'
+  - id: media_2_title
+    type: std::string
+    initial_value: '""'
+  - id: media_2_artist
+    type: std::string
+    initial_value: '""'
+  - id: media_2_state
+    type: std::string
+    initial_value: '""'
+  - id: media_2_entity_id
+    type: std::string
+    initial_value: '""'
+  - id: media_3_title
+    type: std::string
+    initial_value: '""'
+  - id: media_3_artist
+    type: std::string
+    initial_value: '""'
+  - id: media_3_state
+    type: std::string
+    initial_value: '""'
+  - id: media_3_entity_id
+    type: std::string
+    initial_value: '""'
+  - id: guest_wifi_qr
+    type: std::string
+    initial_value: '"WIFI:S:;T:WPA;P:;;"'
 ################################################################################
 # Textes (Noms)
 ################################################################################
@@ -689,6 +752,96 @@ script:
           variables:
             tgt: !lambda 'return id(selected_media_id);'
             vol: !lambda 'return id(pending_volume) / 100.0;'
+  - id: update_weather_ui
+    then:
+      - lvgl.label.update:
+          id: lbl_weather_condition
+          text: !lambda |-
+            std::string x = id(weather_cond);
+            if (x == "sunny")            return std::string("\U000F0599");
+            if (x == "clear-night")      return std::string("\U000F0594");
+            if (x == "partlycloudy")     return std::string("\U000F0595");
+            if (x == "cloudy")           return std::string("\U000F0590");
+            if (x == "rainy")            return std::string("\U000F0597");
+            if (x == "snowy")            return std::string("\U000F0598");
+            if (x == "lightning")        return std::string("\U000F0593");
+            if (x == "lightning-rainy")  return std::string("\U000F067E");
+            if (x == "windy")            return std::string("\U000F059D");
+            if (x == "fog")              return std::string("\U000F0591");
+            return std::string("\U000F0590");
+      - lvgl.label.update:
+          id: lbl_temperature
+          text: !lambda |-
+            std::string x = id(weather_temp);
+            if (x == "unavailable" || x == "unknown" || x == "") return std::string("-- °C");
+            if (x.find("°") != std::string::npos) return x;
+            return x + std::string(" °C");
+      - lvgl.label.update:
+          id: lbl_icon_demain
+          text: !lambda |-
+            std::string x = id(weather_cond_demain);
+            if (x == "sunny") return std::string("\U000F0599");
+            if (x == "partlycloudy") return std::string("\U000F0595");
+            if (x == "cloudy") return std::string("\U000F0590");
+            if (x == "rainy") return std::string("\U000F0597");
+            if (x == "snowy") return std::string("\U000F0598");
+            if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
+            return std::string("\U000F0590");
+      - lvgl.label.update:
+          id: lbl_max_demain
+          text: !lambda 'return id(weather_max_demain) + std::string("°C");'
+      - lvgl.label.update:
+          id: lbl_min_demain
+          text: !lambda 'return id(weather_min_demain) + std::string("°C");'
+      - lvgl.label.update:
+          id: lbl_icon_apres_demain
+          text: !lambda |-
+            std::string x = id(weather_cond_apres_demain);
+            if (x == "sunny") return std::string("\U000F0599");
+            if (x == "partlycloudy") return std::string("\U000F0595");
+            if (x == "cloudy") return std::string("\U000F0590");
+            if (x == "rainy") return std::string("\U000F0597");
+            if (x == "snowy") return std::string("\U000F0598");
+            if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
+            return std::string("\U000F0590");
+      - lvgl.label.update:
+          id: lbl_max_apres_demain
+          text: !lambda 'return id(weather_max_apres_demain) + std::string("°C");'
+      - lvgl.label.update:
+          id: lbl_min_apres_demain
+          text: !lambda 'return id(weather_min_apres_demain) + std::string("°C");'
+  - id: update_media_ui
+    then:
+      - lvgl.label.update:
+          id: lbl_media_song
+          text: !lambda |-
+            std::string m = id(selected_media_id);
+            std::string t = "";
+            if (m == id(media_1_entity_id)) t = id(media_1_title);
+            else if (m == id(media_2_entity_id)) t = id(media_2_title);
+            else if (m == id(media_3_entity_id)) t = id(media_3_title);
+            if (t == "" || t == "unavailable" || t == "unknown") return std::string("Aucun titre en lecture");
+            return t;
+      - lvgl.label.update:
+          id: lbl_media_artist
+          text: !lambda |-
+            std::string m = id(selected_media_id);
+            std::string a = "";
+            if (m == id(media_1_entity_id)) a = id(media_1_artist);
+            else if (m == id(media_2_entity_id)) a = id(media_2_artist);
+            else if (m == id(media_3_entity_id)) a = id(media_3_artist);
+            if (a == "" || a == "unavailable" || a == "unknown") return std::string("");
+            return a;
+      - lvgl.label.update:
+          id: lbl_media_playpause
+          text: !lambda |-
+            std::string m = id(selected_media_id);
+            std::string s = "";
+            if (m == id(media_1_entity_id)) s = id(media_1_state);
+            else if (m == id(media_2_entity_id)) s = id(media_2_state);
+            else if (m == id(media_3_entity_id)) s = id(media_3_state);
+            if (s == "playing") return std::string("\U000F03E4");
+            return std::string("\U000F040A");
 ################################################################################
 # Core services
 ################################################################################
@@ -701,6 +854,64 @@ api:
     - homeassistant.event:
         event: esphome.entrance_panel_request_config
   services:
+    - service: set_weather
+      variables:
+        cond: string
+        temp: string
+        cond_d1: string
+        max_d1: string
+        min_d1: string
+        cond_d2: string
+        max_d2: string
+        min_d2: string
+      then:
+        - lambda: |-
+            id(weather_cond) = cond;
+            id(weather_temp) = temp;
+            id(weather_cond_demain) = cond_d1;
+            id(weather_max_demain) = max_d1;
+            id(weather_min_demain) = min_d1;
+            id(weather_cond_apres_demain) = cond_d2;
+            id(weather_max_apres_demain) = max_d2;
+            id(weather_min_apres_demain) = min_d2;
+        - script.execute: update_weather_ui
+    - service: set_media
+      variables:
+        player: int
+        entity_id: string
+        state: string
+        title: string
+        artist: string
+      then:
+        - lambda: |-
+            if (player == 1) {
+              id(media_1_entity_id) = entity_id;
+              id(media_1_state) = state;
+              id(media_1_title) = title;
+              id(media_1_artist) = artist;
+            } else if (player == 2) {
+              id(media_2_entity_id) = entity_id;
+              id(media_2_state) = state;
+              id(media_2_title) = title;
+              id(media_2_artist) = artist;
+            } else if (player == 3) {
+              id(media_3_entity_id) = entity_id;
+              id(media_3_state) = state;
+              id(media_3_title) = title;
+              id(media_3_artist) = artist;
+            }
+            if (id(selected_media_id) == "media_player." + std::to_string(player)) {
+               id(selected_media_id) = entity_id;
+            }
+        - script.execute: update_media_ui
+    - service: set_qr
+      variables:
+        qr_text: string
+      then:
+        - lambda: 'id(guest_wifi_qr) = qr_text;'
+        - lvgl.qrcode.update:
+            id: my_qr_code
+            text: !lambda 'return id(guest_wifi_qr).c_str();'
     - service: set_button_config
       variables:
         button: int
@@ -949,16 +1160,6 @@ text_sensor:
         - lvgl.label.update:
             id: lbl_min_apres_demain
             text: !lambda 'return x + std::string("°C");'
-  # --- ÉTATS DES LECTEURS POUR ICÔNE DYNAMIQUE ---
-  - platform: homeassistant
-    id: state_media_1
-    entity_id: media_player.philips_lf10x_d2f1
-  - platform: homeassistant
-    id: state_media_2
-    entity_id: media_player.vaca_c55138e5f_media_player
-  - platform: homeassistant
-    id: state_media_3
-    entity_id: media_player.chromecast_mini_sous_sol
 sensor:
   - platform: wifi_signal
     name: "Dashboard WiFi Signal"
@@ -2624,9 +2825,10 @@ lvgl:
             radius: 10
             widgets:
               - qrcode:
+                  id: my_qr_code
                   align: CENTER
                   size: 220
-                  text: ${wifi_qr}
+                  text: !lambda 'return id(guest_wifi_qr).c_str();'
     # ====================================================================
     # PAGE 5 : CONTRÔLE LUMIÈRE
     # ====================================================================
@@ -2836,14 +3038,15 @@ lvgl:
                   height: 46
                   symbol: "\U000F035D"
                   options:
-                    - "Philips (Salon)"
-                    - "Vaca (Chambre)"
-                    - "Chromecast (S-Sol)"
+                    - "Lecteur 1"
+                    - "Lecteur 2"
+                    - "Lecteur 3"
                   on_value:
                     - lambda: |-
-                        if (x == 0) id(selected_media_id) = "media_player.philips_lf10x_d2f1";
-                        else if (x == 1) id(selected_media_id) = "media_player.vaca_c55138e5f_media_player";
-                        else if (x == 2) id(selected_media_id) = "media_player.chromecast_mini_sous_sol";
+                        if (x == 0) id(selected_media_id) = id(media_1_entity_id);
+                        else if (x == 1) id(selected_media_id) = id(media_2_entity_id);
+                        else if (x == 2) id(selected_media_id) = id(media_3_entity_id);
+                    - script.execute: update_media_ui
         # --- INFOS MÉDIA ---
         - label:
             id: lbl_media_song
@@ -2966,44 +3169,6 @@ interval:
             char buf[40];
             snprintf(buf, sizeof(buf), "%s, %d %s", days[t.day_of_week - 1], t.day_of_month, months[t.month - 1]);
             return std::string(buf);
-      # UPDATE DYNAMIQUE TITRES & ARTISTES & PLAY/PAUSE (seulement si page 7 ouverte)
-      - if:
-          condition:
-            lambda: 'return id(current_page) == 7;'
-          then:
-            # Update Titre
-            - lvgl.label.update:
-                id: lbl_media_song
-                text: !lambda |-
-                  std::string m = id(selected_media_id);
-                  std::string t = "";
-                  if (m == "media_player.philips_lf10x_d2f1") t = id(title_1).state;
-                  else if (m == "media_player.vaca_c55138e5f_media_player") t = id(title_2).state;
-                  else if (m == "media_player.chromecast_mini_sous_sol") t = id(title_3).state;
-                  if (t == "" || t == "unavailable" || t == "unknown") return std::string("Aucun titre en lecture");
-                  return t;
-            # Update Artiste
-            - lvgl.label.update:
-                id: lbl_media_artist
-                text: !lambda |-
-                  std::string m = id(selected_media_id);
-                  std::string a = "";
-                  if (m == "media_player.philips_lf10x_d2f1") a = id(artist_1).state;
-                  else if (m == "media_player.vaca_c55138e5f_media_player") a = id(artist_2).state;
-                  else if (m == "media_player.chromecast_mini_sous_sol") a = id(artist_3).state;
-                  if (a == "" || a == "unavailable" || a == "unknown") return std::string("");
-                  return a;
-            # Update Icône Play/Pause dynamiquement
-            - lvgl.label.update:
-                id: lbl_media_playpause
-                text: !lambda |-
-                  std::string m = id(selected_media_id);
-                  std::string s = "";
-                  if (m == "media_player.philips_lf10x_d2f1") s = id(state_media_1).state;
-                  else if (m == "media_player.vaca_c55138e5f_media_player") s = id(state_media_2).state;
-                  else if (m == "media_player.chromecast_mini_sous_sol") s = id(state_media_3).state;
-                  if (s == "playing") return std::string("\U000F03E4"); // Icône de Pause
-                  return std::string("\U000F040A"); // Icône de Play
       # UPDATE DU TEXTE SUR L'ÉCRAN DE VEILLE (Seulement si sur page 99 et activé)
       - if:
           condition:
@@ -3016,9 +3181,9 @@ interval:
                   std::string state = "";
                   std::string t = "";
                   std::string a = "";
-                  if (m == "media_player.philips_lf10x_d2f1") { state = id(state_media_1).state; t = id(title_1).state; a = id(artist_1).state; }
-                  else if (m == "media_player.vaca_c55138e5f_media_player") { state = id(state_media_2).state; t = id(title_2).state; a = id(artist_2).state; }
-                  else if (m == "media_player.chromecast_mini_sous_sol") { state = id(state_media_3).state; t = id(title_3).state; a = id(artist_3).state; }
+                  if (m == id(media_1_entity_id)) { state = id(media_1_state); t = id(media_1_title); a = id(media_1_artist); }
+                  else if (m == id(media_2_entity_id)) { state = id(media_2_state); t = id(media_2_title); a = id(media_2_artist); }
+                  else if (m == id(media_3_entity_id)) { state = id(media_3_state); t = id(media_3_title); a = id(media_3_artist); }
                   if (state == "playing" && t != "" && t != "unavailable" && t != "unknown") {
                       if (a != "" && a != "unknown") {
                           return t + " - " + a;
