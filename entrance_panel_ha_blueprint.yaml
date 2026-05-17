@@ -219,6 +219,7 @@ action:
               - condition: trigger
                 id: init_panel
         sequence:
+          - delay: 5
           - service: "esphome.{{ panel_name }}_set_button_config"
             data:
               button: 1
