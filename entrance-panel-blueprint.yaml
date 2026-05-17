@@ -1,0 +1,3032 @@
+################################################################################
+#  Waveshare ESP32-S3-Touch-LCD-7  —  Home Dashboard
+#  ESPHome firmware - V3.1 PRO (100% Web + Menus Déroulants Entités & Icônes)
+################################################################################
+substitutions:
+  device_name:  entrance-dashboard
+  friendly_name:  "Entrance Dashboard"
+  wifi_ssid: "BELL685"
+  wifi_pwd: "1739EC3C"
+  wifi_qr: "WIFI:S:BELL685;T:WPA;P:1739EC3C;;"
+################################################################################
+# Board & framework
+################################################################################
+esphome:
+  name: entrance-panel
+  platformio_options:
+    build_flags: "-DBOARD_HAS_PSRAM"
+    board_build.arduino.memory_type: qio_opi
+    board_build.flash_mode: dio
+    board_upload.maximum_ram_size: 524288
+    board_upload.maximum_size: 8388608
+  on_boot:
+    priority: -10
+    then:
+      - light.turn_on: lcd_backlight
+      - lambda: 'id(current_page) = 0;'
+      - lvgl.page.show: main_page
+      - script.execute: sync_button_states
+      - script.execute: reset_sleep_timer
+      - lambda: |-
+          lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+          lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+          lv_obj_report_style_change(id(style_light_btn_checked));
+          lv_obj_report_style_change(id(style_scene_btn_checked));
+
+          if (id(theme_r) == 217 && id(theme_g) == 119) {
+            lv_obj_add_state(id(btn_color_orange), LV_STATE_CHECKED);
+          } else if (id(theme_r) == 59 && id(theme_g) == 130) {
+            lv_obj_add_state(id(btn_color_blue), LV_STATE_CHECKED);
+          } else if (id(theme_r) == 16 && id(theme_g) == 185) {
+            lv_obj_add_state(id(btn_color_green), LV_STATE_CHECKED);
+          }
+psram:
+  mode: octal
+  speed: 80MHz
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: ESP32S3
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      COMPILER_OPTIMIZATION_SIZE: y
+      CONFIG_ESP32S3_DATA_CACHE_64KB:         "y"
+      CONFIG_ESPTOOLPY_FLASHSIZE_8MB:         "y"
+      CONFIG_FREERTOS_HZ:                     "1000"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240:    "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS:       y
+      CONFIG_SPIRAM_RODATA:                   y
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B:     y
+      CONFIG_LCD_RGB_ISR_IRAM_SAFE:           y
+      CONFIG_LCD_RGB_RESTART_IN_VSYNC:        y
+      CONFIG_ESP_WIFI_IRAM_OPT:              y
+      CONFIG_ESP_WIFI_RX_IRAM_OPT:           y
+      CONFIG_LWIP_IRAM_OPTIMIZATION:          y
+################################################################################
+# Serveur Web
+################################################################################
+web_server:
+  port: 80
+  version: 3
+  local: true
+################################################################################
+# Variables Globales
+################################################################################
+globals:
+  - id: sleep_delay_s
+    type: int
+    initial_value: '60'
+  - id: selected_light_id
+    type: std::string
+    initial_value: '""'
+  - id: selected_media_id
+    type: std::string
+    initial_value: '""'
+  - id: current_page
+    type: int
+    initial_value: '0'
+  - id: screensaver_mode
+    type: int
+    initial_value: '1'
+  - id: screensaver_clock_size
+    type: int
+    initial_value: '1'
+  - id: pending_brightness
+    type: int
+    initial_value: '50'
+  - id: pending_temp
+    type: int
+    initial_value: '4000'
+  - id: pending_volume
+    type: int
+    initial_value: '20'
+  - id: show_media_on_screensaver
+    type: int
+    initial_value: '1'
+  - id: theme_r
+    type: int
+    initial_value: '217'
+    restore_value: true
+  - id: theme_g
+    type: int
+    initial_value: '119'
+    restore_value: true
+  - id: theme_b
+    type: int
+    initial_value: '6'
+    restore_value: true
+################################################################################
+# Textes (Noms)
+################################################################################
+text:
+  - platform: template
+    name: "Bouton 1 - Nom"
+    id: btn1_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Salon"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 2 - Nom"
+    id: btn2_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Cuisine"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 3 - Nom"
+    id: btn3_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "S. à Manger"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 4 - Nom"
+    id: btn4_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Extérieur"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 5 - Nom"
+    id: btn5_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Soir"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 6 - Nom"
+    id: btn6_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Cinéma"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 7 - Nom"
+    id: btn7_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Matin"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 8 - Nom"
+    id: btn8_name
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "Bonne nuit"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 1 - Entité HA"
+    id: btn1_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 2 - Entité HA"
+    id: btn2_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 3 - Entité HA"
+    id: btn3_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 4 - Entité HA"
+    id: btn4_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 5 - Entité HA"
+    id: btn5_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 6 - Entité HA"
+    id: btn6_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 7 - Entité HA"
+    id: btn7_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 8 - Entité HA"
+    id: btn8_entity
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+  - platform: template
+    name: "Bouton 1 - Icône"
+    id: btn1_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:lightbulb"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 2 - Icône"
+    id: btn2_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:silverware-fork-knife"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 3 - Icône"
+    id: btn3_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:sofa"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 4 - Icône"
+    id: btn4_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:tree"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 5 - Icône"
+    id: btn5_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:weather-night"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 6 - Icône"
+    id: btn6_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:television"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 7 - Icône"
+    id: btn7_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:weather-sunset-up"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 8 - Icône"
+    id: btn8_icon
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "mdi:bed-empty"
+    on_value:
+      then:
+        - script.execute: sync_button_states
+  - platform: template
+    name: "Bouton 1 - Action"
+    id: btn1_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "light"
+  - platform: template
+    name: "Bouton 2 - Action"
+    id: btn2_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "light"
+  - platform: template
+    name: "Bouton 3 - Action"
+    id: btn3_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "light"
+  - platform: template
+    name: "Bouton 4 - Action"
+    id: btn4_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "light"
+  - platform: template
+    name: "Bouton 5 - Action"
+    id: btn5_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "script"
+  - platform: template
+    name: "Bouton 6 - Action"
+    id: btn6_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "media_player"
+  - platform: template
+    name: "Bouton 7 - Action"
+    id: btn7_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "script"
+  - platform: template
+    name: "Bouton 8 - Action"
+    id: btn8_type
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "script"
+################################################################################
+# Scripts
+################################################################################
+script:
+
+  - id: sync_button_states
+    mode: restart
+    then:
+      - lvgl.label.update:
+          id: lbl_btn1_text
+          text: !lambda 'return id(btn1_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn1_icon
+          text: !lambda |-
+            std::string i = id(btn1_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn2_text
+          text: !lambda 'return id(btn2_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn2_icon
+          text: !lambda |-
+            std::string i = id(btn2_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn3_text
+          text: !lambda 'return id(btn3_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn3_icon
+          text: !lambda |-
+            std::string i = id(btn3_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn4_text
+          text: !lambda 'return id(btn4_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn4_icon
+          text: !lambda |-
+            std::string i = id(btn4_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn5_text
+          text: !lambda 'return id(btn5_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn5_icon
+          text: !lambda |-
+            std::string i = id(btn5_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn6_text
+          text: !lambda 'return id(btn6_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn6_icon
+          text: !lambda |-
+            std::string i = id(btn6_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn7_text
+          text: !lambda 'return id(btn7_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn7_icon
+          text: !lambda |-
+            std::string i = id(btn7_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lvgl.label.update:
+          id: lbl_btn8_text
+          text: !lambda 'return id(btn8_name).state;'
+      - lvgl.label.update:
+          id: lbl_btn8_icon
+          text: !lambda |-
+            std::string i = id(btn8_icon).state;
+            if(i=="mdi:lightbulb-outline") return "\U000F0A1E";
+            if(i=="mdi:sofa") return "\U000F04E1";
+            if(i=="mdi:silverware-fork-knife") return "\U000F0A70";
+            if(i=="mdi:tree") return "\U000F06D9";
+            if(i=="mdi:weather-night") return "\U000F059A";
+            if(i=="mdi:movie-open") return "\U000F0502";
+            if(i=="mdi:weather-sunset-up") return "\U000F0599";
+            if(i=="mdi:bed-empty") return "\U000F02E3";
+            if(i=="mdi:home") return "\U000F02DC";
+            if(i=="mdi:power") return "\U000F0425";
+            if(i=="mdi:television") return "\U000F04FB";
+            if(i=="mdi:lamp") return "\U000F06B5";
+            if(i=="mdi:fan") return "\U000F0210";
+            if(i=="mdi:door") return "\U000F081B";
+            return "\U000F04B9";
+      - lambda: |-
+          if (id(sleep_delay_s) == 60) lv_obj_add_state(id(btn_delay_1m), LV_STATE_CHECKED);
+          else if (id(sleep_delay_s) == 300) lv_obj_add_state(id(btn_delay_5m), LV_STATE_CHECKED);
+          else if (id(sleep_delay_s) == 0) lv_obj_add_state(id(btn_delay_always), LV_STATE_CHECKED);
+
+          if (id(screensaver_mode) == 0) lv_obj_add_state(id(btn_screensaver_black), LV_STATE_CHECKED);
+          else if (id(screensaver_mode) == 1) lv_obj_add_state(id(btn_screensaver_clock), LV_STATE_CHECKED);
+
+          if (id(show_media_on_screensaver) == 1) lv_obj_add_state(id(btn_screensaver_media_yes), LV_STATE_CHECKED);
+          else if (id(show_media_on_screensaver) == 0) lv_obj_add_state(id(btn_screensaver_media_no), LV_STATE_CHECKED);
+
+          if (id(screensaver_clock_size) == 0) lv_obj_add_state(id(btn_clock_size_small), LV_STATE_CHECKED);
+          else if (id(screensaver_clock_size) == 1) lv_obj_add_state(id(btn_clock_size_medium), LV_STATE_CHECKED);
+          else if (id(screensaver_clock_size) == 2) lv_obj_add_state(id(btn_clock_size_large), LV_STATE_CHECKED);
+
+          lv_style_set_border_color(id(style_setting_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+          lv_obj_report_style_change(id(style_setting_btn_checked));
+
+          if (id(screensaver_clock_size) == 0) lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock), 0);
+          else if (id(screensaver_clock_size) == 1) lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock_large), 0);
+          else if (id(screensaver_clock_size) == 2) lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock_xlarge), 0);
+  - id: reset_sleep_timer
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return id(sleep_delay_s) > 0;'
+          then:
+            - delay: !lambda 'return id(sleep_delay_s) * 1000;'
+            - if:
+                condition:
+                  lambda: 'return id(screensaver_mode) == 1;'
+                then:
+                  - lambda: 'id(current_page) = 99;'
+                  - lvgl.page.show: screensaver_page
+                else:
+                  - light.turn_off: lcd_backlight
+  - id: auto_return_timer
+    mode: restart
+    then:
+      - delay: 10s
+      - lambda: 'id(current_page) = 0;'
+      - script.execute: sync_button_states
+      - lvgl.page.show: main_page
+  - id: apply_brightness
+    mode: restart
+    then:
+      - delay: 150ms
+      - homeassistant.action:
+          action: light.turn_on
+          data_template:
+            entity_id: "{{ tgt }}"
+            brightness_pct: "{{ bright }}"
+          variables:
+            tgt: !lambda 'return id(selected_light_id);'
+            bright: !lambda 'return id(pending_brightness);'
+  - id: apply_color_temp
+    mode: restart
+    then:
+      - delay: 150ms
+      - homeassistant.action:
+          action: light.turn_on
+          data_template:
+            entity_id: "{{ tgt }}"
+            color_temp_kelvin: "{{ temp }}"
+          variables:
+            tgt: !lambda 'return id(selected_light_id);'
+            temp: !lambda 'return id(pending_temp);'
+  # --- SCRIPTS DU LECTEUR MULTIMÉDIA (CORRIGÉS POUR HOME ASSISTANT) ---
+  - id: media_play_pause
+    then:
+      - homeassistant.action:
+          action: media_player.media_play_pause
+          data_template:
+            entity_id: "{{ tgt }}"
+          variables:
+            tgt: !lambda 'return id(selected_media_id);'
+  - id: media_stop
+    then:
+      - homeassistant.action:
+          action: media_player.media_stop
+          data_template:
+            entity_id: "{{ tgt }}"
+          variables:
+            tgt: !lambda 'return id(selected_media_id);'
+  - id: media_next
+    then:
+      - homeassistant.action:
+          action: media_player.media_next_track
+          data_template:
+            entity_id: "{{ tgt }}"
+          variables:
+            tgt: !lambda 'return id(selected_media_id);'
+  - id: media_prev
+    then:
+      - homeassistant.action:
+          action: media_player.media_previous_track
+          data_template:
+            entity_id: "{{ tgt }}"
+          variables:
+            tgt: !lambda 'return id(selected_media_id);'
+  - id: apply_volume
+    mode: restart
+    then:
+      - delay: 150ms
+      - homeassistant.action:
+          action: media_player.volume_set
+          data_template:
+            entity_id: "{{ tgt }}"
+            volume_level: "{{ vol }}"
+          variables:
+            tgt: !lambda 'return id(selected_media_id);'
+            vol: !lambda 'return id(pending_volume) / 100.0;'
+################################################################################
+# Core services
+################################################################################
+logger:
+  level: WARN
+  hardware_uart: USB_SERIAL_JTAG
+api:
+  on_client_connected:
+    - homeassistant.event:
+        event: esphome.entrance_panel_request_config
+  services:
+    - service: set_button_config
+      variables:
+        button: int
+        name: string
+        icon: string
+        action: string
+        entity: string
+      then:
+        - lambda: |-
+            if (button == 1) {
+              id(btn1_name).publish_state(name);
+              id(btn1_icon).publish_state(icon);
+              id(btn1_type).publish_state(action);
+              id(btn1_entity).publish_state(entity);
+            } else if (button == 2) {
+              id(btn2_name).publish_state(name);
+              id(btn2_icon).publish_state(icon);
+              id(btn2_type).publish_state(action);
+              id(btn2_entity).publish_state(entity);
+            } else if (button == 3) {
+              id(btn3_name).publish_state(name);
+              id(btn3_icon).publish_state(icon);
+              id(btn3_type).publish_state(action);
+              id(btn3_entity).publish_state(entity);
+            } else if (button == 4) {
+              id(btn4_name).publish_state(name);
+              id(btn4_icon).publish_state(icon);
+              id(btn4_type).publish_state(action);
+              id(btn4_entity).publish_state(entity);
+            } else if (button == 5) {
+              id(btn5_name).publish_state(name);
+              id(btn5_icon).publish_state(icon);
+              id(btn5_type).publish_state(action);
+              id(btn5_entity).publish_state(entity);
+            } else if (button == 6) {
+              id(btn6_name).publish_state(name);
+              id(btn6_icon).publish_state(icon);
+              id(btn6_type).publish_state(action);
+              id(btn6_entity).publish_state(entity);
+            } else if (button == 7) {
+              id(btn7_name).publish_state(name);
+              id(btn7_icon).publish_state(icon);
+              id(btn7_type).publish_state(action);
+              id(btn7_entity).publish_state(entity);
+            } else if (button == 8) {
+              id(btn8_name).publish_state(name);
+              id(btn8_icon).publish_state(icon);
+              id(btn8_type).publish_state(action);
+              id(btn8_entity).publish_state(entity);
+            }
+        - script.execute: sync_button_states
+ota:
+wifi:
+  ssid: "${wifi_ssid}"
+  password: "${wifi_pwd}"
+  output_power: 17
+  power_save_mode: NONE
+  reboot_timeout: 5min
+  ap:
+    ssid: "${device_name}-fallback"
+captive_portal:
+time:
+  - platform: homeassistant
+    id: ha_time
+i2c:
+  sda: GPIO08
+  scl: GPIO09
+  scan: true
+  id: bus_a
+ch422g:
+  - id: ch422g_hub
+light:
+  - platform: binary
+    id: lcd_backlight
+    output: backlight_out
+output:
+  - platform: gpio
+    id: backlight_out
+    pin:
+      ch422g: ch422g_hub
+      number: 2
+      mode:
+        output: true
+      inverted: false
+################################################################################
+# ── HA SENSOR IMPORTS
+################################################################################
+text_sensor:
+  - platform: homeassistant
+
+    id: notification_sensor
+
+    entity_id: input_text.dashboard_notification
+
+    on_value:
+
+      then:
+
+        - lvgl.label.update:
+
+            id: lbl_notification_text
+
+            text: !lambda 'return x;'
+
+        - lambda: |-
+
+            if (x != "" && x != "unavailable" && x != "unknown") {
+
+              lv_obj_clear_flag(id(notification_card), LV_OBJ_FLAG_HIDDEN);
+
+              lv_obj_add_flag(id(main_btn1), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn2), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn3), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn4), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn5), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn6), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn7), LV_OBJ_FLAG_HIDDEN);
+              lv_obj_add_flag(id(main_btn8), LV_OBJ_FLAG_HIDDEN);
+
+              lv_obj_clear_flag(id(lbl_screensaver_notification), LV_OBJ_FLAG_HIDDEN);
+
+            }
+  - platform: wifi_info
+    ip_address:
+      id: ip_address_sensor
+      on_value:
+        then:
+          - lvgl.label.update:
+              id: lbl_ip_address
+              text: !lambda 'return std::string("IP : ") + x;'
+  # --- TITRES DES MÉDIAS (Pour les 3 options du menu déroulant) ---
+  - platform: homeassistant
+    id: title_1
+    entity_id: media_player.philips_lf10x_d2f1
+    attribute: media_title
+  - platform: homeassistant
+    id: title_2
+    entity_id: media_player.vaca_c55138e5f_media_player
+    attribute: media_title
+  - platform: homeassistant
+    id: title_3
+    entity_id: media_player.chromecast_mini_sous_sol
+    attribute: media_title
+  # --- ARTISTES DES MÉDIAS ---
+  - platform: homeassistant
+    id: artist_1
+    entity_id: media_player.philips_lf10x_d2f1
+    attribute: media_artist
+  - platform: homeassistant
+    id: artist_2
+    entity_id: media_player.vaca_c55138e5f_media_player
+    attribute: media_artist
+  - platform: homeassistant
+    id: artist_3
+    entity_id: media_player.chromecast_mini_sous_sol
+    attribute: media_artist
+  - platform: homeassistant
+    id: weather_condition
+    entity_id: weather.forecast_maison
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_weather_condition
+            text: !lambda |-
+              if (x == "sunny")            return std::string("\U000F0599");
+              if (x == "clear-night")      return std::string("\U000F0594");
+              if (x == "partlycloudy")     return std::string("\U000F0595");
+              if (x == "cloudy")           return std::string("\U000F0590");
+              if (x == "rainy")            return std::string("\U000F0597");
+              if (x == "snowy")            return std::string("\U000F0598");
+              if (x == "lightning")        return std::string("\U000F0593");
+              if (x == "lightning-rainy")  return std::string("\U000F067E");
+              if (x == "windy")            return std::string("\U000F059D");
+              if (x == "fog")              return std::string("\U000F0591");
+              return std::string("\U000F0590");
+  - platform: homeassistant
+    id: outdoor_temp
+    entity_id: sensor.temperature_exterieure
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_temperature
+            text: !lambda |-
+              if (x == "unavailable" || x == "unknown" || x == "") return std::string("-- °C");
+              if (x.find("°") != std::string::npos) return x;
+              return x + std::string(" °C");
+  - platform: homeassistant
+    id: cond_demain
+    entity_id: sensor.meteo_demain_condition
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_icon_demain
+            text: !lambda |-
+              if (x == "sunny") return std::string("\U000F0599");
+              if (x == "partlycloudy") return std::string("\U000F0595");
+              if (x == "cloudy") return std::string("\U000F0590");
+              if (x == "rainy") return std::string("\U000F0597");
+              if (x == "snowy") return std::string("\U000F0598");
+              if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
+              return std::string("\U000F0590");
+  - platform: homeassistant
+    id: max_demain
+    entity_id: sensor.meteo_demain_max
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_max_demain
+            text: !lambda 'return x + std::string("°C");'
+  - platform: homeassistant
+    id: min_demain
+    entity_id: sensor.meteo_demain_min
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_min_demain
+            text: !lambda 'return x + std::string("°C");'
+  - platform: homeassistant
+    id: cond_apres_demain
+    entity_id: sensor.meteo_apres_demain_condition
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_icon_apres_demain
+            text: !lambda |-
+              if (x == "sunny") return std::string("\U000F0599");
+              if (x == "partlycloudy") return std::string("\U000F0595");
+              if (x == "cloudy") return std::string("\U000F0590");
+              if (x == "rainy") return std::string("\U000F0597");
+              if (x == "snowy") return std::string("\U000F0598");
+              if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
+              return std::string("\U000F0590");
+  - platform: homeassistant
+    id: max_apres_demain
+    entity_id: sensor.meteo_apres_demain_max
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_max_apres_demain
+            text: !lambda 'return x + std::string("°C");'
+  - platform: homeassistant
+    id: min_apres_demain
+    entity_id: sensor.meteo_apres_demain_min
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_min_apres_demain
+            text: !lambda 'return x + std::string("°C");'
+  # --- ÉTATS DES LECTEURS POUR ICÔNE DYNAMIQUE ---
+  - platform: homeassistant
+    id: state_media_1
+    entity_id: media_player.philips_lf10x_d2f1
+  - platform: homeassistant
+    id: state_media_2
+    entity_id: media_player.vaca_c55138e5f_media_player
+  - platform: homeassistant
+    id: state_media_3
+    entity_id: media_player.chromecast_mini_sous_sol
+sensor:
+  - platform: wifi_signal
+    name: "Dashboard WiFi Signal"
+    update_interval: 60s
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_wifi
+            text: !lambda |-
+              if (x > -60) return std::string("\U000F05A9");
+              if (x > -75) return std::string("\U000F05A7");
+              if (x > -85) return std::string("\U000F05A6");
+              return std::string("\U000F05A5");
+################################################################################
+# Fonts & Colors
+################################################################################
+font:
+  - file: "gfonts://Roboto"
+    id: font_clock
+    size: 72
+    bpp: 4
+  - file: "gfonts://Roboto"
+    id: font_clock_large
+    size: 110
+    bpp: 4
+  - file: "gfonts://Roboto"
+    id: font_clock_xlarge
+    size: 140
+    bpp: 4
+  - file: "gfonts://Roboto"
+    id: font_date
+    size: 26
+    bpp: 4
+    glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~éèàêîïôûçÉÈÀÊÎÏÔÛÇ'
+  - file: "gfonts://Roboto"
+    id: font_temp
+    size: 34
+    bpp: 4
+    glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~éèàêîïôûçÉÈÀÊÎÏÔÛÇ°'
+  - file: "gfonts://Roboto"
+    id: font_forecast
+    size: 28
+    bpp: 4
+    glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~éèàêîïôûçÉÈÀÊÎÏÔÛÇ°'
+  - file: "gfonts://Roboto"
+    id: font_btn
+    size: 22
+    bpp: 4
+    glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~éèàêîïôûçÉÈÀÊÎÏÔÛÇ'
+  - file: "gfonts://Roboto"
+    id: font_heading
+    size: 18
+    bpp: 4
+    glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~éèàêîïôûçÉÈÀÊÎÏÔÛÇ'
+  - file: "https://github.com/Templarian/MaterialDesign-Webfont/raw/master/fonts/materialdesignicons-webfont.ttf"
+    id: font_icons_56
+    size: 56
+    bpp: 4
+    glyphs:
+      - "\U000F0599" # sun
+      - "\U000F0590" # cloud
+      - "\U000F040A" # mdi:play
+      - "\U000F03E4" # mdi:pause
+      - "\U000F04DB" # mdi:stop
+      - "\U000F04AD" # mdi:skip-previous
+      - "\U000F04AC" # mdi:skip-next
+      - "\U000F0594" # weather-night
+      - "\U000F0595" # weather-partly-cloudy
+      - "\U000F0597" # weather-rainy
+      - "\U000F0598" # weather-snowy
+      - "\U000F0593" # weather-lightning
+      - "\U000F067E" # weather-lightning-rainy
+      - "\U000F059D" # weather-windy
+      - "\U000F0591" # weather-fog
+      - "\U000F009A" # bell
+  - file: "https://github.com/Templarian/MaterialDesign-Webfont/raw/master/fonts/materialdesignicons-webfont.ttf"
+    id: font_mdi_icons_32
+    size: 32
+    bpp: 4
+    glyphs:
+      - "\U000F04B9" # lightbulb
+      - "\U000F0A1E" # lightbulb-outline
+      - "\U000F04E1" # sofa
+      - "\U000F0A70" # silverware
+      - "\U000F06D9" # tree
+      - "\U000F059A" # night
+      - "\U000F0502" # movie
+      - "\U000F0599" # sunset
+      - "\U000F02E3" # bed
+      - "\U000F02DC" # home
+      - "\U000F0425" # power
+      - "\U000F04FB" # tv
+      - "\U000F06B5" # lamp
+      - "\U000F0210" # fan
+      - "\U000F081B" # door
+      - "\U000F05A9" # wifi
+      - "\U000F004D" # arrow-left
+      - "\U000F075A" # mdi:music (LA NOTE DE MUSIQUE)
+      - "\U000F035D" # mdi:menu-down (triangle dropdown)
+  - file: "https://github.com/FortAwesome/Font-Awesome/raw/master/webfonts/fa-solid-900.ttf"
+    id: font_fa_solid_32
+    size: 32
+    bpp: 4
+    glyphs:
+      - "\U0000f013" # gear
+      - "\U0000f029" # qrcode
+color:
+  - id: col_bg
+    hex: "111827"
+  - id: col_header_bg
+    hex: "1F2937"
+  - id: col_divider
+    hex: "374151"
+  - id: col_text_primary
+    hex: "F9FAFB"
+  - id: col_text_secondary
+    hex: "9CA3AF"
+  - id: col_accent
+    hex: "3B82F6"
+  - id: col_btn_off
+    hex: "1F2937"
+  - id: col_btn_on
+    hex: "D97706"
+  - id: col_scene_btn
+    hex: "1E3A5F"
+  - id: col_scene_active
+    hex: "1D4ED8"
+  - id: col_white
+    hex: "FFFFFF"
+  - id: col_black
+    hex: "000000"
+  - id: col_orange
+    hex: "D97706"
+  - id: col_green
+    hex: "10B981"
+
+  - id: col_red
+    hex: "F87171"
+  - id: col_blue
+    hex: "60A5FA"
+################################################################################
+# Display & Touch
+################################################################################
+display:
+  - platform: rpi_dpi_rgb
+    id: my_display
+    update_interval: never
+    auto_clear_enabled: false
+    color_order: RGB
+    pclk_frequency: 14MHz
+    dimensions:
+      width: 800
+      height: 480
+    de_pin: 5
+    hsync_pin:
+      number: 46
+      ignore_strapping_warning: true
+    vsync_pin:
+      number: 3
+      ignore_strapping_warning: true
+    pclk_pin: 7
+    pclk_inverted: true
+    reset_pin:
+      ch422g: ch422g_hub
+      number: 3
+    hsync_back_porch:  8
+    hsync_front_porch: 8
+    hsync_pulse_width: 4
+    vsync_back_porch:  16
+    vsync_front_porch: 16
+    vsync_pulse_width: 4
+    data_pins:
+      red: [1, 2, 42, 41, 40]
+      blue: [14, 38, 18, 17, 10]
+      green: [39, 0, 45, 48, 47, 21]
+touchscreen:
+  platform: gt911
+  id: my_touch
+  display: my_display
+  interrupt_pin: GPIO4
+  reset_pin:
+    ch422g: ch422g_hub
+    number: 1
+    mode: OUTPUT
+  on_touch:
+    - light.turn_on: lcd_backlight
+    - script.execute: reset_sleep_timer
+    # Attention: le retour automatique ne s'applique PAS à la page 7 (Media Player)
+    - if:
+        condition:
+          lambda: 'return id(current_page) > 0 && id(current_page) < 7;'
+        then:
+          - script.execute: auto_return_timer
+    - if:
+        condition:
+          lambda: 'return id(current_page) == 99;'
+        then:
+          - lambda: 'id(current_page) = 0;'
+          - script.execute: sync_button_states
+          - lvgl.page.show: main_page
+################################################################################
+# LVGL — UI avec 7 pages
+################################################################################
+lvgl:
+  on_boot:
+    - lambda: |-
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, id(lbl_screensaver_notification));
+        lv_anim_set_values(&a, 255, 50);
+        lv_anim_set_time(&a, 2000);
+        lv_anim_set_playback_time(&a, 2000);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_exec_cb(&a, [](void * var, int32_t v) {
+            lv_obj_set_style_text_opa((lv_obj_t *)var, v, 0);
+        });
+        lv_anim_start(&a);
+  color_depth: 16
+  buffer_size: 15%
+  log_level: WARN
+  bg_color: col_bg
+  text_font: font_btn
+  width:  800
+  height: 480
+  touchscreens:
+    - touchscreen_id: my_touch
+  style_definitions:
+    - id: style_light_btn
+      radius: 12
+      border_width: 2
+      border_color: col_divider
+      bg_color: col_btn_off
+      bg_opa: COVER
+      text_color: col_text_primary
+      pad_all: 8
+    - id: style_light_btn_checked
+      bg_color: col_btn_on
+      border_color: col_accent
+    - id: style_scene_btn
+      radius: 12
+      border_width: 2
+      border_color: col_divider
+      bg_color: col_scene_btn
+      bg_opa: COVER
+      text_color: col_text_primary
+      pad_all: 8
+    - id: style_scene_btn_pressed
+      bg_color: col_scene_active
+      border_color: col_accent
+    - id: style_scene_btn_checked
+      bg_color: col_btn_on
+      border_color: col_accent
+    - id: style_section_heading
+      text_color: col_text_secondary
+      text_font: font_heading
+      bg_opa: TRANSP
+      border_opa: TRANSP
+      pad_bottom: 4
+    - id: style_setting_btn_checked
+      bg_color: col_scene_btn
+      bg_opa: COVER
+      border_width: 2
+      border_color: col_accent
+      text_color: col_text_primary
+  pages:
+    # PAGE 1 : PRINCIPALE
+    - id: main_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        - obj:
+            id: header_panel
+            x: 0
+            y: 0
+            width: 800
+            height: 110
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - label:
+                  id: lbl_clock
+                  x: 24
+                  y: 10
+                  text_font: font_clock
+                  text_color: col_text_primary
+                  text: "00:00"
+              - label:
+                  id: lbl_date
+                  x: 26
+                  y: 75
+                  text_font: font_date
+                  text_color: col_text_secondary
+                  text: "Dimanche, 1 Janvier"
+              - obj:
+                  x: 340
+                  y: 12
+                  width: 2
+                  height: 86
+                  bg_color: col_divider
+                  bg_opa: COVER
+                  border_width: 0
+              - obj:
+                  x: 350
+                  y: 5
+                  width: 200
+                  height: 100
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollbar_mode: "OFF"
+                  clickable: true
+                  on_short_click:
+                    - lambda: 'id(current_page) = 3;'
+                    - script.execute: auto_return_timer
+                    - lvgl.page.show: forecast_page
+                  widgets:
+                    - label:
+                        id: lbl_weather_condition
+                        x: 10
+                        y: 20
+                        text_font: font_icons_56
+                        text_color: col_text_primary
+                        text: "\U000F0590"
+                    - label:
+                        id: lbl_temperature
+                        x: 85
+                        y: 32
+                        text_font: font_temp
+                        text_color: col_text_primary
+                        text: "--°C"
+              # HAUT DROITE - ICÔNES DE RACCCOURCI
+              - label:
+                  id: lbl_wifi
+                  x: 570
+                  y: 40
+                  text_font: font_mdi_icons_32
+                  text_color: col_text_secondary
+                  text: "\U000F05A9"
+              - label:
+                  id: btn_media
+                  x: 630
+                  y: 40
+                  text_font: font_mdi_icons_32
+                  text_color: col_text_secondary
+                  text: "\U000F075A"
+                  clickable: true
+                  on_short_click:
+                    - lambda: 'id(current_page) = 7;'
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+              - label:
+                  id: btn_qr
+                  x: 690
+                  y: 40
+                  text_font: font_fa_solid_32
+                  text_color: col_text_secondary
+                  text: "\U0000f029"
+                  clickable: true
+                  on_short_click:
+                    - lambda: 'id(current_page) = 4;'
+                    - script.execute: auto_return_timer
+                    - lvgl.page.show: qr_page
+              - label:
+                  id: btn_settings
+                  x: 750
+                  y: 40
+                  text_font: font_fa_solid_32
+                  text_color: col_text_secondary
+                  text: "\U0000f013"
+                  clickable: true
+                  on_short_click:
+                    - lambda: 'id(current_page) = 2;'
+                    - script.execute: auto_return_timer
+                    - lvgl.page.show: settings_page
+        # --- CARTE DE NOTIFICATION ---
+
+        - obj:
+
+            id: notification_card
+
+            x: 20
+
+            y: 130
+
+            width: 760
+
+            height: 300
+
+            bg_color: col_btn_off
+
+            border_width: 2
+
+            border_color: col_divider
+
+            radius: 12
+
+            hidden: true
+
+            widgets:
+
+              - label:
+
+                  id: lbl_notification_text
+
+                  align: CENTER
+
+                  y: -20
+
+                  width: 720
+
+                  text_font: font_forecast
+
+                  text_color: col_text_primary
+
+                  text_align: CENTER
+
+                  long_mode: SCROLL_CIRCULAR
+
+                  text: "Aucune notification pour le moment."
+
+              - button:
+
+                  align: BOTTOM_MID
+
+                  y: -20
+
+                  width: 200
+
+                  height: 50
+
+                  styles: style_scene_btn
+
+                  widgets:
+
+                    - label:
+
+                        align: CENTER
+
+                        text: "Fermer"
+
+                  on_short_click:
+
+                    - lambda: |-
+                        lv_obj_add_flag(id(notification_card), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn1), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn2), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn3), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn4), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn5), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn6), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn7), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(id(main_btn8), LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_add_flag(id(lbl_screensaver_notification), LV_OBJ_FLAG_HIDDEN);
+                    - homeassistant.action:
+                        action: input_text.set_value
+                        data:
+                          entity_id: input_text.dashboard_notification
+                          value: ""
+        - button:
+            id: main_btn1
+            x: 20
+            y: 130
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn1_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn1_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn1_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn1_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn1_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn1_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn1_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn1_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn1_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn1_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn1_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn1_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn1_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn2
+            x: 215
+            y: 130
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn2_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn2_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn2_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn2_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn2_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn2_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn2_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn2_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn2_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn2_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn2_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn2_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn2_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn3
+            x: 410
+            y: 130
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn3_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn3_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn3_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn3_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn3_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn3_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn3_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn3_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn3_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn3_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn3_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn3_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn3_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn4
+            x: 605
+            y: 130
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn4_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn4_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn4_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn4_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn4_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn4_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn4_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn4_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn4_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn4_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn4_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn4_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn4_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn5
+            x: 20
+            y: 290
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn5_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn5_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn5_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn5_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn5_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn5_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn5_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn5_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn5_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn5_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn5_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn5_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn5_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn6
+            x: 215
+            y: 290
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn6_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn6_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn6_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn6_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn6_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn6_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn6_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn6_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn6_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn6_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn6_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn6_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn6_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn7
+            x: 410
+            y: 290
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn7_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F04B9"
+              - label:
+                  id: lbl_btn7_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn7_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn7_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn7_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn7_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn7_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn7_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn7_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn7_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn7_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn7_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn7_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+        - button:
+            id: main_btn8
+            x: 605
+            y: 290
+            width: 175
+            height: 140
+            checkable: true
+            styles: style_light_btn
+            checked:
+              styles: style_light_btn_checked
+            widgets:
+              - label:
+                  id: lbl_btn8_icon
+                  align: CENTER
+                  y: -15
+                  text_font: font_mdi_icons_32
+                  text: "\U000F02E3"
+              - label:
+                  id: lbl_btn8_text
+                  align: BOTTOM_MID
+                  y: -10
+                  text_font: font_btn
+                  text: "..."
+            on_short_click:
+              - if:
+                  condition:
+                    lambda: 'return id(btn8_type).state == "light";'
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn8_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn8_type).state == "script";'
+                  then:
+                    - homeassistant.action:
+                        action: script.turn_on
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn8_entity).state;'
+              - if:
+                  condition:
+                    lambda: 'return id(btn8_type).state == "media_player";'
+                  then:
+                    - homeassistant.action:
+                        action: media_player.toggle
+                        data_template:
+                          entity_id: "{{ tgt }}"
+                        variables:
+                          tgt: !lambda 'return id(btn8_entity).state;'
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: 'return id(btn8_type).state == "light";'
+                  then:
+                    - lambda: |-
+                        id(selected_light_id) = id(btn8_entity).state;
+                        id(current_page) = 5;
+                    - script.execute: auto_return_timer
+                    - lvgl.label.update:
+                        id: lbl_control_title
+                        text: !lambda 'return id(btn8_name).state;'
+                    - lvgl.page.show: light_control_page
+              - if:
+                  condition:
+                    lambda: 'return id(btn8_type).state == "media_player";'
+                  then:
+                    - lambda: |-
+                        id(selected_media_id) = id(btn8_entity).state;
+                        id(current_page) = 7;
+                    - script.stop: auto_return_timer
+                    - lvgl.page.show: media_control_page
+
+    # ====================================================================
+    # PAGE 2 : RÉGLAGES
+    # ====================================================================
+    - id: settings_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 80
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - button:
+                  x: 10
+                  y: 10
+                  width: 150
+                  height: 60
+                  bg_color: col_bg
+                  radius: 10
+                  border_width: 2
+                  border_color: col_divider
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 10
+                        y: 14
+                        text_font: font_mdi_icons_32
+                        text: "\U000F004D"
+                    - label:
+                        x: 50
+                        y: 18
+                        text_font: font_btn
+                        text: "Retour"
+                  on_short_click:
+                    - lambda: 'id(current_page) = 0;'
+                    - script.stop: auto_return_timer
+                    - script.execute: sync_button_states
+                    - lvgl.page.show: main_page
+              - label:
+                  x: 340
+                  y: 25
+                  text_font: font_temp
+                  text_color: col_text_primary
+                  text: "Réglages"
+        - label:
+            x: 40
+            y: 90
+            styles: style_section_heading
+            text: "DÉLAI DE MISE EN VEILLE (ÉCRAN)"
+        - button:
+            id: btn_delay_1m
+            x: 40
+            y: 120
+            width: 200
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "1 Minute"
+            on_short_click:
+              - lambda: |-
+                  id(sleep_delay_s) = 60;
+                  lv_obj_add_state(id(btn_delay_1m), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_5m), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_always), LV_STATE_CHECKED);
+              - script.execute: reset_sleep_timer
+        - button:
+            id: btn_delay_5m
+            x: 260
+            y: 120
+            width: 200
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "5 Minutes"
+            on_short_click:
+              - lambda: |-
+                  id(sleep_delay_s) = 300;
+                  lv_obj_add_state(id(btn_delay_5m), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_1m), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_always), LV_STATE_CHECKED);
+              - script.execute: reset_sleep_timer
+        - button:
+            id: btn_delay_always
+            x: 480
+            y: 120
+            width: 250
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Toujours Allumé"
+            on_short_click:
+              - lambda: |-
+                  id(sleep_delay_s) = 0;
+                  lv_obj_add_state(id(btn_delay_always), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_1m), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_delay_5m), LV_STATE_CHECKED);
+              - light.turn_on: lcd_backlight
+        - label:
+            x: 40
+            y: 180
+            styles: style_section_heading
+            text: "COMPORTEMENT DE LA VEILLE"
+        - button:
+            id: btn_screensaver_black
+            x: 40
+            y: 210
+            width: 310
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Écran Noir"
+            on_short_click:
+              - lambda: |-
+                  id(screensaver_mode) = 0;
+                  lv_obj_add_state(id(btn_screensaver_black), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_screensaver_clock), LV_STATE_CHECKED);
+        - button:
+            id: btn_screensaver_clock
+            x: 370
+            y: 210
+            width: 310
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Horloge Plein Écran"
+            on_short_click:
+              - lambda: |-
+                  id(screensaver_mode) = 1;
+                  lv_obj_add_state(id(btn_screensaver_clock), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_screensaver_black), LV_STATE_CHECKED);
+        - label:
+            x: 40
+            y: 270
+            styles: style_section_heading
+            text: "AFFICHER LA MUSIQUE SUR LA VEILLE"
+        - button:
+            id: btn_screensaver_media_yes
+            x: 40
+            y: 300
+            width: 310
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Oui"
+            on_short_click:
+              - lambda: |-
+                  id(show_media_on_screensaver) = 1;
+                  lv_obj_add_state(id(btn_screensaver_media_yes), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_screensaver_media_no), LV_STATE_CHECKED);
+        - button:
+            id: btn_screensaver_media_no
+            x: 370
+            y: 300
+            width: 310
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Non"
+            on_short_click:
+              - lambda: |-
+                  id(show_media_on_screensaver) = 0;
+                  lv_obj_add_state(id(btn_screensaver_media_no), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_screensaver_media_yes), LV_STATE_CHECKED);
+        - label:
+            x: 40
+            y: 370
+            styles: style_section_heading
+            text: "TAILLE DE L'HORLOGE (VEILLE)"
+        - button:
+            id: btn_clock_size_small
+            x: 40
+            y: 400
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Petit"
+            on_short_click:
+              - lambda: |-
+                  id(screensaver_clock_size) = 0;
+                  lv_obj_add_state(id(btn_clock_size_small), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_medium), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_large), LV_STATE_CHECKED);
+                  lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock), 0);
+        - button:
+            id: btn_clock_size_medium
+            x: 280
+            y: 400
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Moyen"
+            on_short_click:
+              - lambda: |-
+                  id(screensaver_clock_size) = 1;
+                  lv_obj_add_state(id(btn_clock_size_medium), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_small), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_large), LV_STATE_CHECKED);
+                  lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock_large), 0);
+        - button:
+            id: btn_clock_size_large
+            x: 520
+            y: 400
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Grand"
+            on_short_click:
+              - lambda: |-
+                  id(screensaver_clock_size) = 2;
+                  lv_obj_add_state(id(btn_clock_size_large), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_small), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_clock_size_medium), LV_STATE_CHECKED);
+                  lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock_xlarge), 0);
+        - label:
+            x: 40
+            y: 470
+            styles: style_section_heading
+            text: "COULEUR DES BOUTONS ACTIFS"
+        - button:
+            id: btn_color_orange
+            x: 40
+            y: 500
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Orange"
+            on_short_click:
+              - lambda: |-
+                  id(theme_r) = 217;
+                  id(theme_g) = 119;
+                  id(theme_b) = 6;
+                  lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_border_color(id(style_setting_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_obj_report_style_change(id(style_light_btn_checked));
+                  lv_obj_report_style_change(id(style_scene_btn_checked));
+                  lv_obj_report_style_change(id(style_setting_btn_checked));
+                  lv_obj_add_state(id(btn_color_orange), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_blue), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_green), LV_STATE_CHECKED);
+        - button:
+            id: btn_color_blue
+            x: 280
+            y: 500
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Bleu"
+            on_short_click:
+              - lambda: |-
+                  id(theme_r) = 59;
+                  id(theme_g) = 130;
+                  id(theme_b) = 246;
+                  lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_border_color(id(style_setting_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_obj_report_style_change(id(style_light_btn_checked));
+                  lv_obj_report_style_change(id(style_scene_btn_checked));
+                  lv_obj_report_style_change(id(style_setting_btn_checked));
+                  lv_obj_add_state(id(btn_color_blue), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_orange), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_green), LV_STATE_CHECKED);
+        - button:
+            id: btn_color_green
+            x: 520
+            y: 500
+            width: 220
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Vert"
+            on_short_click:
+              - lambda: |-
+                  id(theme_r) = 16;
+                  id(theme_g) = 185;
+                  id(theme_b) = 129;
+                  lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_style_set_border_color(id(style_setting_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
+                  lv_obj_report_style_change(id(style_light_btn_checked));
+                  lv_obj_report_style_change(id(style_scene_btn_checked));
+                  lv_obj_report_style_change(id(style_setting_btn_checked));
+                  lv_obj_add_state(id(btn_color_green), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_orange), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_color_blue), LV_STATE_CHECKED);
+        - label:
+            x: 40
+            y: 570
+            styles: style_section_heading
+            text: "INFORMATIONS RÉSEAU"
+        - label:
+            id: lbl_ip_address
+            x: 40
+            y: 600
+            text_font: font_btn
+            text_color: col_text_primary
+            text: "IP : En attente..."
+    # ====================================================================
+    # PAGE 3 : PRÉVISIONS MÉTÉO
+    # ====================================================================
+    - id: forecast_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 80
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - button:
+                  x: 10
+                  y: 10
+                  width: 150
+                  height: 60
+                  bg_color: col_bg
+                  radius: 10
+                  border_width: 2
+                  border_color: col_divider
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 10
+                        y: 14
+                        text_font: font_mdi_icons_32
+                        text: "\U000F004D"
+                    - label:
+                        x: 50
+                        y: 18
+                        text_font: font_btn
+                        text: "Retour"
+                  on_short_click:
+                    - lambda: 'id(current_page) = 0;'
+                    - script.stop: auto_return_timer
+                    - script.execute: sync_button_states
+                    - lvgl.page.show: main_page
+              - label:
+                  x: 340
+                  y: 25
+                  text_font: font_temp
+                  text_color: col_text_primary
+                  text: "Prévisions"
+        - label:
+            x: 80
+            y: 120
+            styles: style_section_heading
+            text: "DEMAIN"
+        - obj:
+            x: 80
+            y: 160
+            width: 300
+            height: 200
+            bg_color: col_btn_off
+            border_width: 2
+            border_color: col_divider
+            radius: 12
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - label:
+                  id: lbl_icon_demain
+                  align: CENTER
+                  y: -30
+                  text_font: font_icons_56
+                  text_color: col_text_primary
+                  text: "\U000F0590"
+              - label:
+                  x: 20
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_red
+                  text: "Max:"
+              - label:
+                  id: lbl_max_demain
+                  x: 80
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_text_primary
+                  text: "--°C"
+              - label:
+                  x: 160
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_blue
+                  text: "Min:"
+              - label:
+                  id: lbl_min_demain
+                  x: 220
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_text_primary
+                  text: "--°C"
+        - label:
+            x: 420
+            y: 120
+            styles: style_section_heading
+            text: "APRÈS-DEMAIN"
+        - obj:
+            x: 420
+            y: 160
+            width: 300
+            height: 200
+            bg_color: col_btn_off
+            border_width: 2
+            border_color: col_divider
+            radius: 12
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - label:
+                  id: lbl_icon_apres_demain
+                  align: CENTER
+                  y: -30
+                  text_font: font_icons_56
+                  text_color: col_text_primary
+                  text: "\U000F0590"
+              - label:
+                  x: 20
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_red
+                  text: "Max:"
+              - label:
+                  id: lbl_max_apres_demain
+                  x: 80
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_text_primary
+                  text: "--°C"
+              - label:
+                  x: 160
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_blue
+                  text: "Min:"
+              - label:
+                  id: lbl_min_apres_demain
+                  x: 220
+                  y: 140
+                  text_font: font_forecast
+                  text_color: col_text_primary
+                  text: "--°C"
+    # ====================================================================
+    # PAGE 4 : CODE QR WI-FI
+    # ====================================================================
+    - id: qr_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 80
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - button:
+                  x: 10
+                  y: 10
+                  width: 150
+                  height: 60
+                  bg_color: col_bg
+                  radius: 10
+                  border_width: 2
+                  border_color: col_divider
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 10
+                        y: 14
+                        text_font: font_mdi_icons_32
+                        text: "\U000F004D"
+                    - label:
+                        x: 50
+                        y: 18
+                        text_font: font_btn
+                        text: "Retour"
+                  on_short_click:
+                    - lambda: 'id(current_page) = 0;'
+                    - script.stop: auto_return_timer
+                    - script.execute: sync_button_states
+                    - lvgl.page.show: main_page
+              - label:
+                  x: 320
+                  y: 25
+                  text_font: font_temp
+                  text_color: col_text_primary
+                  text: "Wi-Fi Invités"
+        - obj:
+            align: CENTER
+            y: 40
+            width: 260
+            height: 260
+            bg_color: col_white
+            bg_opa: COVER
+            border_width: 0
+            radius: 10
+            widgets:
+              - qrcode:
+                  align: CENTER
+                  size: 220
+                  text: ${wifi_qr}
+    # ====================================================================
+    # PAGE 5 : CONTRÔLE LUMIÈRE
+    # ====================================================================
+    - id: light_control_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 80
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - button:
+                  x: 10
+                  y: 10
+                  width: 150
+                  height: 60
+                  bg_color: col_bg
+                  radius: 10
+                  border_width: 2
+                  border_color: col_divider
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 10
+                        y: 14
+                        text_font: font_mdi_icons_32
+                        text: "\U000F004D"
+                    - label:
+                        x: 50
+                        y: 18
+                        text_font: font_btn
+                        text: "Retour"
+                  on_short_click:
+                    - lambda: 'id(current_page) = 0;'
+                    - script.stop: auto_return_timer
+                    - script.execute: sync_button_states
+                    - lvgl.page.show: main_page
+              - label:
+                  id: lbl_control_title
+                  x: 350
+                  y: 25
+                  text_font: font_temp
+                  text_color: col_text_primary
+                  text: "Lumière"
+        - label:
+            x: 40
+            y: 120
+            styles: style_section_heading
+            text: "LUMINOSITÉ (%)"
+        - slider:
+            id: slider_bright
+            x: 40
+            y: 160
+            width: 720
+            height: 40
+            min_value: 0
+            max_value: 100
+            value: 50
+            on_value:
+              - script.execute: auto_return_timer
+              - lambda: 'id(pending_brightness) = x;'
+              - script.execute: apply_brightness
+        - label:
+            x: 40
+            y: 260
+            styles: style_section_heading
+            text: "TEMPÉRATURE DE COULEUR (K)"
+        - slider:
+            id: slider_temp
+            x: 40
+            y: 300
+            width: 720
+            height: 40
+            min_value: 2700
+            max_value: 6500
+            value: 4000
+            on_value:
+              - script.execute: auto_return_timer
+              - lambda: 'id(pending_temp) = x;'
+              - script.execute: apply_color_temp
+              - lambda: |-
+                  float pct = (x - 2700.0) / (6500.0 - 2700.0);
+                  uint8_t r, g, b;
+                  if (pct <= 0.5) {
+                    float p = pct / 0.5;
+                    r = 255;
+                    g = 160 + (95 * p);
+                    b = 255 * p;
+                  } else {
+                    float p = (pct - 0.5) / 0.5;
+                    r = 255 - (95 * p);
+                    g = 255 - (55 * p);
+                    b = 255;
+                  }
+                  lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_KNOB);
+                  lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_INDICATOR);
+    # ====================================================================
+    # PAGE 6 : ÉCRAN DE VEILLE
+    # ====================================================================
+    - id: screensaver_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      bg_color: col_black
+      widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 480
+            bg_opa: TRANSP
+            border_width: 0
+            clickable: true
+            on_short_click:
+              - lambda: 'id(current_page) = 0;'
+              - script.execute: sync_button_states
+              - lvgl.page.show: main_page
+              - script.execute: reset_sleep_timer
+            widgets:
+              - label:
+                  id: lbl_screensaver_clock
+                  align: CENTER
+                  y: -60
+                  text_font: font_clock_large
+                  text_color: col_text_primary
+                  text: "00:00"
+              - label:
+                  id: lbl_screensaver_date
+                  align: CENTER
+                  y: 40
+                  text_font: font_temp
+                  text_color: col_text_secondary
+                  text: "Dimanche, 1 Janvier"
+              - label:
+                  id: lbl_screensaver_media
+                  align: BOTTOM_MID
+                  y: -50
+                  text_font: font_forecast
+                  text_color: col_accent
+                  text: ""
+              - label:
+                  id: lbl_screensaver_notification
+                  align: TOP_RIGHT
+                  x: -30
+                  y: 30
+                  text_font: font_icons_56
+                  text_color: col_orange
+                  text: "\U000F009A"
+                  hidden: true
+# ====================================================================
+    # PAGE 7 : LECTEUR MÉDIA (PRO FIX)
+    # ====================================================================
+    - id: media_control_page
+      scrollable: true
+      scrollbar_mode: "OFF"
+      pad_all: 0
+      widgets:
+        # --- HEADER ---
+        - obj:
+            x: 0
+            y: 0
+            width: 800
+            height: 80
+            bg_color: col_header_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - button:
+                  x: 10
+                  y: 10
+                  width: 150
+                  height: 60
+                  bg_color: col_bg
+                  radius: 10
+                  border_width: 2
+                  border_color: col_divider
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 10
+                        y: 14
+                        text_font: font_mdi_icons_32
+                        text: "\U000F004D"
+                    - label:
+                        x: 50
+                        y: 18
+                        text_font: font_btn
+                        text: "Retour"
+                  on_short_click:
+                    - lambda: 'id(current_page) = 0;'
+                    - lvgl.page.show: main_page
+              - dropdown:
+                  id: media_selector
+                  x: 340
+                  y: 17
+                  width: 350
+                  height: 46
+                  symbol: "\U000F035D"
+                  options:
+                    - "Philips (Salon)"
+                    - "Vaca (Chambre)"
+                    - "Chromecast (S-Sol)"
+                  on_value:
+                    - lambda: |-
+                        if (x == 0) id(selected_media_id) = "media_player.philips_lf10x_d2f1";
+                        else if (x == 1) id(selected_media_id) = "media_player.vaca_c55138e5f_media_player";
+                        else if (x == 2) id(selected_media_id) = "media_player.chromecast_mini_sous_sol";
+        # --- INFOS MÉDIA ---
+        - label:
+            id: lbl_media_song
+            x: 0
+            y: 110
+            width: 800
+            align: TOP_MID
+            text_align: CENTER
+            long_mode: SCROLL_CIRCULAR
+            text_font: font_temp
+            text_color: col_text_primary
+            text: "Aucun titre en lecture"
+        - label:
+            id: lbl_media_artist
+            x: 0
+            y: 155
+            width: 800
+            align: TOP_MID
+            text_font: font_forecast
+            text_color: col_text_secondary
+            text: ""
+        # --- BOUTONS DE CONTRÔLE ---
+        - button: # Précédent
+            x: 180
+            y: 220
+            width: 100
+            height: 100
+            radius: 50
+            bg_color: col_header_bg
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_icons_56
+                  text: "\U000F04AD"
+            on_short_click:
+              - script.execute: media_prev
+        - button: # Play/Pause
+            x: 350
+            y: 210
+            width: 100
+            height: 100
+            radius: 50
+            bg_color: col_accent
+            widgets:
+              - label:
+                  id: lbl_media_playpause
+                  align: CENTER
+                  text_font: font_icons_56
+                  text: "\U000F040A"
+            on_short_click:
+              - script.execute: media_play_pause
+        - button: # Suivant
+            x: 520
+            y: 220
+            width: 100
+            height: 100
+            radius: 50
+            bg_color: col_header_bg
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_icons_56
+                  text: "\U000F04AC"
+            on_short_click:
+              - script.execute: media_next
+        # --- SECTION VOLUME ---
+        - label:
+            x: 40
+            y: 360
+            text: "VOLUME (%)"
+            text_font: font_heading
+            text_color: col_text_primary
+        - slider:
+            id: slider_volume
+            x: 40
+            y: 390
+            width: 720
+            height: 12
+            value: 20
+            on_value:
+              - lambda: 'id(pending_volume) = x;'
+              - script.execute: apply_volume
+################################################################################
+# Clock interval & Updates Dynamiques
+################################################################################
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: lbl_clock
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%02d:%02d", t.hour, t.minute);
+            return std::string(buf);
+      - lvgl.label.update:
+          id: lbl_screensaver_clock
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%02d:%02d", t.hour, t.minute);
+            return std::string(buf);
+      - lvgl.label.update:
+          id: lbl_date
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            static const char* days[]   = {"Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"};
+            static const char* months[] = {"Janvier","Février","Mars","Avril","Mai","Juin",
+                                            "Juillet","Août","Septembre","Octobre","Novembre","Décembre"};
+            char buf[40];
+            snprintf(buf, sizeof(buf), "%s, %d %s", days[t.day_of_week - 1], t.day_of_month, months[t.month - 1]);
+            return std::string(buf);
+      - lvgl.label.update:
+          id: lbl_screensaver_date
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            static const char* days[]   = {"Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"};
+            static const char* months[] = {"Janvier","Février","Mars","Avril","Mai","Juin",
+                                            "Juillet","Août","Septembre","Octobre","Novembre","Décembre"};
+            char buf[40];
+            snprintf(buf, sizeof(buf), "%s, %d %s", days[t.day_of_week - 1], t.day_of_month, months[t.month - 1]);
+            return std::string(buf);
+      # UPDATE DYNAMIQUE TITRES & ARTISTES & PLAY/PAUSE (seulement si page 7 ouverte)
+      - if:
+          condition:
+            lambda: 'return id(current_page) == 7;'
+          then:
+            # Update Titre
+            - lvgl.label.update:
+                id: lbl_media_song
+                text: !lambda |-
+                  std::string m = id(selected_media_id);
+                  std::string t = "";
+                  if (m == "media_player.philips_lf10x_d2f1") t = id(title_1).state;
+                  else if (m == "media_player.vaca_c55138e5f_media_player") t = id(title_2).state;
+                  else if (m == "media_player.chromecast_mini_sous_sol") t = id(title_3).state;
+                  if (t == "" || t == "unavailable" || t == "unknown") return std::string("Aucun titre en lecture");
+                  return t;
+            # Update Artiste
+            - lvgl.label.update:
+                id: lbl_media_artist
+                text: !lambda |-
+                  std::string m = id(selected_media_id);
+                  std::string a = "";
+                  if (m == "media_player.philips_lf10x_d2f1") a = id(artist_1).state;
+                  else if (m == "media_player.vaca_c55138e5f_media_player") a = id(artist_2).state;
+                  else if (m == "media_player.chromecast_mini_sous_sol") a = id(artist_3).state;
+                  if (a == "" || a == "unavailable" || a == "unknown") return std::string("");
+                  return a;
+            # Update Icône Play/Pause dynamiquement
+            - lvgl.label.update:
+                id: lbl_media_playpause
+                text: !lambda |-
+                  std::string m = id(selected_media_id);
+                  std::string s = "";
+                  if (m == "media_player.philips_lf10x_d2f1") s = id(state_media_1).state;
+                  else if (m == "media_player.vaca_c55138e5f_media_player") s = id(state_media_2).state;
+                  else if (m == "media_player.chromecast_mini_sous_sol") s = id(state_media_3).state;
+                  if (s == "playing") return std::string("\U000F03E4"); // Icône de Pause
+                  return std::string("\U000F040A"); // Icône de Play
+      # UPDATE DU TEXTE SUR L'ÉCRAN DE VEILLE (Seulement si sur page 99 et activé)
+      - if:
+          condition:
+            lambda: 'return id(current_page) == 99 && id(show_media_on_screensaver) == 1;'
+          then:
+            - lvgl.label.update:
+                id: lbl_screensaver_media
+                text: !lambda |-
+                  std::string m = id(selected_media_id);
+                  std::string state = "";
+                  std::string t = "";
+                  std::string a = "";
+                  if (m == "media_player.philips_lf10x_d2f1") { state = id(state_media_1).state; t = id(title_1).state; a = id(artist_1).state; }
+                  else if (m == "media_player.vaca_c55138e5f_media_player") { state = id(state_media_2).state; t = id(title_2).state; a = id(artist_2).state; }
+                  else if (m == "media_player.chromecast_mini_sous_sol") { state = id(state_media_3).state; t = id(title_3).state; a = id(artist_3).state; }
+                  if (state == "playing" && t != "" && t != "unavailable" && t != "unknown") {
+                      if (a != "" && a != "unknown") {
+                          return t + " - " + a;
+                      } else {
+                          return t;
+                      }
+                  }
+                  return std::string("");
+          else:
+            - lvgl.label.update:
+                id: lbl_screensaver_media
+                text: ""

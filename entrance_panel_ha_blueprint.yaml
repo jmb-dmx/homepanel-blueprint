@@ -1,0 +1,277 @@
+blueprint:
+  name: Entrance Panel Configuration
+  description: "Configure the Entrance Panel UI and buttons"
+  domain: automation
+  input:
+    panel_device:
+      name: Panel Device
+      description: The ESPHome panel device.
+      selector:
+        device:
+          integration: esphome
+    esphome_node_name:
+      name: ESPHome Node Name
+      description: "The internal node name of the panel in ESPHome (usually entrance_panel)"
+      default: "entrance_panel"
+      selector:
+        text:
+    button_1_entity:
+      name: Button 1 - Entity
+      selector:
+        entity:
+    button_1_name:
+      name: Button 1 - Name
+      default: "Bouton 1"
+      selector:
+        text:
+    button_1_icon:
+      name: Button 1 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_1_type:
+      name: Button 1 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_2_entity:
+      name: Button 2 - Entity
+      selector:
+        entity:
+    button_2_name:
+      name: Button 2 - Name
+      default: "Bouton 2"
+      selector:
+        text:
+    button_2_icon:
+      name: Button 2 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_2_type:
+      name: Button 2 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_3_entity:
+      name: Button 3 - Entity
+      selector:
+        entity:
+    button_3_name:
+      name: Button 3 - Name
+      default: "Bouton 3"
+      selector:
+        text:
+    button_3_icon:
+      name: Button 3 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_3_type:
+      name: Button 3 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_4_entity:
+      name: Button 4 - Entity
+      selector:
+        entity:
+    button_4_name:
+      name: Button 4 - Name
+      default: "Bouton 4"
+      selector:
+        text:
+    button_4_icon:
+      name: Button 4 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_4_type:
+      name: Button 4 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_5_entity:
+      name: Button 5 - Entity
+      selector:
+        entity:
+    button_5_name:
+      name: Button 5 - Name
+      default: "Bouton 5"
+      selector:
+        text:
+    button_5_icon:
+      name: Button 5 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_5_type:
+      name: Button 5 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_6_entity:
+      name: Button 6 - Entity
+      selector:
+        entity:
+    button_6_name:
+      name: Button 6 - Name
+      default: "Bouton 6"
+      selector:
+        text:
+    button_6_icon:
+      name: Button 6 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_6_type:
+      name: Button 6 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_7_entity:
+      name: Button 7 - Entity
+      selector:
+        entity:
+    button_7_name:
+      name: Button 7 - Name
+      default: "Bouton 7"
+      selector:
+        text:
+    button_7_icon:
+      name: Button 7 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_7_type:
+      name: Button 7 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+    button_8_entity:
+      name: Button 8 - Entity
+      selector:
+        entity:
+    button_8_name:
+      name: Button 8 - Name
+      default: "Bouton 8"
+      selector:
+        text:
+    button_8_icon:
+      name: Button 8 - Icon
+      default: "mdi:lightbulb"
+      selector:
+        select:
+          options: ["mdi:lightbulb", "mdi:lightbulb-outline", "mdi:sofa", "mdi:silverware-fork-knife", "mdi:tree", "mdi:weather-night", "mdi:movie-open", "mdi:weather-sunset-up", "mdi:bed-empty", "mdi:home", "mdi:power", "mdi:television", "mdi:lamp", "mdi:fan", "mdi:door"]
+    button_8_type:
+      name: Button 8 - Action Type
+      default: "light"
+      selector:
+        select:
+          options: ["light", "script", "media_player"]
+
+mode: parallel
+max: 10
+
+variables:
+  panel_device_id: !input panel_device
+  panel_name: !input esphome_node_name
+  button_1_type: !input button_1_type
+  button_2_type: !input button_2_type
+  button_3_type: !input button_3_type
+  button_4_type: !input button_4_type
+  button_5_type: !input button_5_type
+  button_6_type: !input button_6_type
+  button_7_type: !input button_7_type
+  button_8_type: !input button_8_type
+
+trigger:
+  - platform: homeassistant
+    event: start
+    id: init_panel
+  - platform: event
+    event_type: automation_reloaded
+    id: init_panel
+  - platform: event
+    event_type: esphome.entrance_panel_request_config
+    id: init_panel
+
+action:
+  - choose:
+      - conditions:
+          - or:
+              - condition: template
+                value_template: "{{ trigger is undefined }}"
+              - condition: trigger
+                id: init_panel
+        sequence:
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 1
+              name: !input button_1_name
+              icon: !input button_1_icon
+              action: !input button_1_type
+              entity: !input button_1_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 2
+              name: !input button_2_name
+              icon: !input button_2_icon
+              action: !input button_2_type
+              entity: !input button_2_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 3
+              name: !input button_3_name
+              icon: !input button_3_icon
+              action: !input button_3_type
+              entity: !input button_3_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 4
+              name: !input button_4_name
+              icon: !input button_4_icon
+              action: !input button_4_type
+              entity: !input button_4_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 5
+              name: !input button_5_name
+              icon: !input button_5_icon
+              action: !input button_5_type
+              entity: !input button_5_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 6
+              name: !input button_6_name
+              icon: !input button_6_icon
+              action: !input button_6_type
+              entity: !input button_6_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 7
+              name: !input button_7_name
+              icon: !input button_7_icon
+              action: !input button_7_type
+              entity: !input button_7_entity
+          - service: "esphome.{{ panel_name }}_set_button_config"
+            data:
+              button: 8
+              name: !input button_8_name
+              icon: !input button_8_icon
+              action: !input button_8_type
+              entity: !input button_8_entity
