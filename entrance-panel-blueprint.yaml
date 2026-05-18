@@ -27,6 +27,7 @@ esphome:
       - lvgl.page.show: main_page
       - script.execute: sync_button_states
       - script.execute: reset_sleep_timer
+      - script.execute: init_slider_colors
       - lambda: |-
           lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
           lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
@@ -730,6 +731,33 @@ script:
             r: !lambda 'return id(pending_r);'
             g: !lambda 'return id(pending_g);'
             b: !lambda 'return id(pending_b);'
+  - id: init_slider_colors
+    then:
+      - lambda: |-
+          float temp = id(pending_temp);
+          float pct = (temp - 2700.0) / (6500.0 - 2700.0);
+          uint8_t r, g, b;
+          if (pct <= 0.5) {
+            float p = pct / 0.5;
+            r = 255;
+            g = 160 + (95 * p);
+            b = 255 * p;
+          } else {
+            float p = (pct - 0.5) / 0.5;
+            r = 255 - (95 * p);
+            g = 255 - (55 * p);
+            b = 255;
+          }
+          lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_r), lv_color_make(id(pending_r), 0, 0), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_r), lv_color_make(id(pending_r), 0, 0), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, id(pending_g), 0), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, id(pending_g), 0), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, id(pending_b)), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, id(pending_b)), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_bright), lv_color_make(id(theme_r), id(theme_g), id(theme_b)), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_bright), lv_color_make(id(theme_r), id(theme_g), id(theme_b)), LV_PART_INDICATOR);
   # --- SCRIPTS DU LECTEUR MULTIMÉDIA (CORRIGÉS POUR HOME ASSISTANT) ---
   - id: media_play_pause
     then:
@@ -2738,7 +2766,7 @@ lvgl:
     # PAGE 5 : CONTRÔLE LUMIÈRE
     # ====================================================================
     - id: light_control_page
-      scrollable: true
+      scrollable: false
       scrollbar_mode: "OFF"
       pad_all: 0
       widgets:
@@ -2788,15 +2816,15 @@ lvgl:
                   text: "Lumière"
         - label:
             x: 40
-            y: 120
+            y: 90
             styles: style_section_heading
             text: "LUMINOSITÉ (%)"
         - slider:
             id: slider_bright
             x: 40
-            y: 160
+            y: 120
             width: 720
-            height: 40
+            height: 20
             min_value: 0
             max_value: 100
             value: 50
@@ -2806,15 +2834,15 @@ lvgl:
               - script.execute: apply_brightness
         - label:
             x: 40
-            y: 260
+            y: 160
             styles: style_section_heading
             text: "TEMPÉRATURE DE COULEUR (K)"
         - slider:
             id: slider_temp
             x: 40
-            y: 300
+            y: 190
             width: 720
-            height: 40
+            height: 20
             min_value: 2700
             max_value: 6500
             value: 4000
@@ -2840,15 +2868,15 @@ lvgl:
                   lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_INDICATOR);
         - label:
             x: 40
-            y: 360
+            y: 230
             styles: style_section_heading
             text: "ROUGE"
         - slider:
             id: slider_r
             x: 40
-            y: 400
+            y: 260
             width: 720
-            height: 40
+            height: 20
             min_value: 0
             max_value: 255
             value: 255
@@ -2861,15 +2889,15 @@ lvgl:
               - script.execute: apply_rgb
         - label:
             x: 40
-            y: 460
+            y: 300
             styles: style_section_heading
             text: "VERT"
         - slider:
             id: slider_g
             x: 40
-            y: 500
+            y: 330
             width: 720
-            height: 40
+            height: 20
             min_value: 0
             max_value: 255
             value: 255
@@ -2882,15 +2910,15 @@ lvgl:
               - script.execute: apply_rgb
         - label:
             x: 40
-            y: 560
+            y: 370
             styles: style_section_heading
             text: "BLEU"
         - slider:
             id: slider_b
             x: 40
-            y: 600
+            y: 400
             width: 720
-            height: 40
+            height: 20
             min_value: 0
             max_value: 255
             value: 255

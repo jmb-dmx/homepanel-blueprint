@@ -210,10 +210,16 @@ blueprint:
       selector:
         entity:
           domain: media_player
-    guest_wifi_qr:
-      name: Guest Wi-Fi QR Code String
-      description: 'Format: WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;'
-      default: "WIFI:S:;T:WPA;P:;;"
+    guest_wifi_ssid:
+      name: Guest Wi-Fi SSID
+      description: 'The network name (SSID)'
+      default: ""
+      selector:
+        text:
+    guest_wifi_pwd:
+      name: Guest Wi-Fi Password
+      description: 'The network password'
+      default: ""
       selector:
         text:
 
@@ -221,6 +227,8 @@ mode: parallel
 max: 10
 
 variables:
+  guest_wifi_ssid: !input guest_wifi_ssid
+  guest_wifi_pwd: !input guest_wifi_pwd
   panel_device_id: !input panel_device
   panel_name: !input esphome_node_name
   button_1_type: !input button_1_type
@@ -330,7 +338,7 @@ action:
               entity: !input button_8_entity
           - service: "esphome.{{ panel_name }}_set_qr"
             data:
-              qr_text: !input guest_wifi_qr
+              qr_text: "WIFI:S:{{ guest_wifi_ssid }};T:WPA;P:{{ guest_wifi_pwd }};;"
           - service: weather.get_forecasts
             data:
               type: daily
