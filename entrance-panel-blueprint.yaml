@@ -27,6 +27,7 @@ esphome:
       - lvgl.page.show: main_page
       - script.execute: sync_button_states
       - script.execute: reset_sleep_timer
+      - script.execute: init_slider_colors
       - lambda: |-
           lv_style_set_bg_color(id(style_light_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
           lv_style_set_bg_color(id(style_scene_btn_checked), lv_color_make(id(theme_r), id(theme_g), id(theme_b)));
@@ -730,6 +731,33 @@ script:
             r: !lambda 'return id(pending_r);'
             g: !lambda 'return id(pending_g);'
             b: !lambda 'return id(pending_b);'
+  - id: init_slider_colors
+    then:
+      - lambda: |-
+          float temp = id(pending_temp);
+          float pct = (temp - 2700.0) / (6500.0 - 2700.0);
+          uint8_t r, g, b;
+          if (pct <= 0.5) {
+            float p = pct / 0.5;
+            r = 255;
+            g = 160 + (95 * p);
+            b = 255 * p;
+          } else {
+            float p = (pct - 0.5) / 0.5;
+            r = 255 - (95 * p);
+            g = 255 - (55 * p);
+            b = 255;
+          }
+          lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_r), lv_color_make(id(pending_r), 0, 0), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_r), lv_color_make(id(pending_r), 0, 0), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, id(pending_g), 0), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, id(pending_g), 0), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, id(pending_b)), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, id(pending_b)), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_color(id(slider_bright), lv_color_make(id(theme_r), id(theme_g), id(theme_b)), LV_PART_KNOB);
+          lv_obj_set_style_bg_color(id(slider_bright), lv_color_make(id(theme_r), id(theme_g), id(theme_b)), LV_PART_INDICATOR);
   # --- SCRIPTS DU LECTEUR MULTIMÉDIA (CORRIGÉS POUR HOME ASSISTANT) ---
   - id: media_play_pause
     then:
