@@ -98,6 +98,15 @@ globals:
   - id: pending_temp
     type: int
     initial_value: '4000'
+  - id: pending_r
+    type: int
+    initial_value: '255'
+  - id: pending_g
+    type: int
+    initial_value: '255'
+  - id: pending_b
+    type: int
+    initial_value: '255'
   - id: pending_volume
     type: int
     initial_value: '20'
@@ -707,6 +716,20 @@ script:
           variables:
             tgt: !lambda 'return id(selected_light_id);'
             temp: !lambda 'return id(pending_temp);'
+  - id: apply_rgb
+    mode: restart
+    then:
+      - delay: 150ms
+      - homeassistant.action:
+          action: light.turn_on
+          data_template:
+            entity_id: "{{ tgt }}"
+            rgb_color: "[{{ r }}, {{ g }}, {{ b }}]"
+          variables:
+            tgt: !lambda 'return id(selected_light_id);'
+            r: !lambda 'return id(pending_r);'
+            g: !lambda 'return id(pending_g);'
+            b: !lambda 'return id(pending_b);'
   # --- SCRIPTS DU LECTEUR MULTIMÉDIA (CORRIGÉS POUR HOME ASSISTANT) ---
   - id: media_play_pause
     then:
@@ -1042,124 +1065,6 @@ text_sensor:
           - lvgl.label.update:
               id: lbl_ip_address
               text: !lambda 'return std::string("IP : ") + x;'
-  # --- TITRES DES MÉDIAS (Pour les 3 options du menu déroulant) ---
-  - platform: homeassistant
-    id: title_1
-    entity_id: media_player.philips_lf10x_d2f1
-    attribute: media_title
-  - platform: homeassistant
-    id: title_2
-    entity_id: media_player.vaca_c55138e5f_media_player
-    attribute: media_title
-  - platform: homeassistant
-    id: title_3
-    entity_id: media_player.chromecast_mini_sous_sol
-    attribute: media_title
-  # --- ARTISTES DES MÉDIAS ---
-  - platform: homeassistant
-    id: artist_1
-    entity_id: media_player.philips_lf10x_d2f1
-    attribute: media_artist
-  - platform: homeassistant
-    id: artist_2
-    entity_id: media_player.vaca_c55138e5f_media_player
-    attribute: media_artist
-  - platform: homeassistant
-    id: artist_3
-    entity_id: media_player.chromecast_mini_sous_sol
-    attribute: media_artist
-  - platform: homeassistant
-    id: weather_condition
-    entity_id: weather.forecast_maison
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_weather_condition
-            text: !lambda |-
-              if (x == "sunny")            return std::string("\U000F0599");
-              if (x == "clear-night")      return std::string("\U000F0594");
-              if (x == "partlycloudy")     return std::string("\U000F0595");
-              if (x == "cloudy")           return std::string("\U000F0590");
-              if (x == "rainy")            return std::string("\U000F0597");
-              if (x == "snowy")            return std::string("\U000F0598");
-              if (x == "lightning")        return std::string("\U000F0593");
-              if (x == "lightning-rainy")  return std::string("\U000F067E");
-              if (x == "windy")            return std::string("\U000F059D");
-              if (x == "fog")              return std::string("\U000F0591");
-              return std::string("\U000F0590");
-  - platform: homeassistant
-    id: outdoor_temp
-    entity_id: sensor.temperature_exterieure
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_temperature
-            text: !lambda |-
-              if (x == "unavailable" || x == "unknown" || x == "") return std::string("-- °C");
-              if (x.find("°") != std::string::npos) return x;
-              return x + std::string(" °C");
-  - platform: homeassistant
-    id: cond_demain
-    entity_id: sensor.meteo_demain_condition
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_icon_demain
-            text: !lambda |-
-              if (x == "sunny") return std::string("\U000F0599");
-              if (x == "partlycloudy") return std::string("\U000F0595");
-              if (x == "cloudy") return std::string("\U000F0590");
-              if (x == "rainy") return std::string("\U000F0597");
-              if (x == "snowy") return std::string("\U000F0598");
-              if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
-              return std::string("\U000F0590");
-  - platform: homeassistant
-    id: max_demain
-    entity_id: sensor.meteo_demain_max
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_max_demain
-            text: !lambda 'return x + std::string("°C");'
-  - platform: homeassistant
-    id: min_demain
-    entity_id: sensor.meteo_demain_min
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_min_demain
-            text: !lambda 'return x + std::string("°C");'
-  - platform: homeassistant
-    id: cond_apres_demain
-    entity_id: sensor.meteo_apres_demain_condition
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_icon_apres_demain
-            text: !lambda |-
-              if (x == "sunny") return std::string("\U000F0599");
-              if (x == "partlycloudy") return std::string("\U000F0595");
-              if (x == "cloudy") return std::string("\U000F0590");
-              if (x == "rainy") return std::string("\U000F0597");
-              if (x == "snowy") return std::string("\U000F0598");
-              if (x == "lightning" || x == "lightning-rainy") return std::string("\U000F0593");
-              return std::string("\U000F0590");
-  - platform: homeassistant
-    id: max_apres_demain
-    entity_id: sensor.meteo_apres_demain_max
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_max_apres_demain
-            text: !lambda 'return x + std::string("°C");'
-  - platform: homeassistant
-    id: min_apres_demain
-    entity_id: sensor.meteo_apres_demain_min
-    on_value:
-      then:
-        - lvgl.label.update:
-            id: lbl_min_apres_demain
-            text: !lambda 'return x + std::string("°C");'
 sensor:
   - platform: wifi_signal
     name: "Dashboard WiFi Signal"
@@ -2933,6 +2838,69 @@ lvgl:
                   }
                   lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_KNOB);
                   lv_obj_set_style_bg_color(id(slider_temp), lv_color_make(r, g, b), LV_PART_INDICATOR);
+        - label:
+            x: 40
+            y: 360
+            styles: style_section_heading
+            text: "ROUGE"
+        - slider:
+            id: slider_r
+            x: 40
+            y: 400
+            width: 720
+            height: 40
+            min_value: 0
+            max_value: 255
+            value: 255
+            on_value:
+              - script.execute: auto_return_timer
+              - lambda: |-
+                  id(pending_r) = x;
+                  lv_obj_set_style_bg_color(id(slider_r), lv_color_make(x, 0, 0), LV_PART_KNOB);
+                  lv_obj_set_style_bg_color(id(slider_r), lv_color_make(x, 0, 0), LV_PART_INDICATOR);
+              - script.execute: apply_rgb
+        - label:
+            x: 40
+            y: 460
+            styles: style_section_heading
+            text: "VERT"
+        - slider:
+            id: slider_g
+            x: 40
+            y: 500
+            width: 720
+            height: 40
+            min_value: 0
+            max_value: 255
+            value: 255
+            on_value:
+              - script.execute: auto_return_timer
+              - lambda: |-
+                  id(pending_g) = x;
+                  lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, x, 0), LV_PART_KNOB);
+                  lv_obj_set_style_bg_color(id(slider_g), lv_color_make(0, x, 0), LV_PART_INDICATOR);
+              - script.execute: apply_rgb
+        - label:
+            x: 40
+            y: 560
+            styles: style_section_heading
+            text: "BLEU"
+        - slider:
+            id: slider_b
+            x: 40
+            y: 600
+            width: 720
+            height: 40
+            min_value: 0
+            max_value: 255
+            value: 255
+            on_value:
+              - script.execute: auto_return_timer
+              - lambda: |-
+                  id(pending_b) = x;
+                  lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, x), LV_PART_KNOB);
+                  lv_obj_set_style_bg_color(id(slider_b), lv_color_make(0, 0, x), LV_PART_INDICATOR);
+              - script.execute: apply_rgb
     # ====================================================================
     # PAGE 6 : ÉCRAN DE VEILLE
     # ====================================================================
