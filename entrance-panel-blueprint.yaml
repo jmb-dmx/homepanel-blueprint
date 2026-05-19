@@ -186,6 +186,9 @@ globals:
   - id: media_3_entity_id
     type: std::string
     initial_value: '""'
+  - id: media_options_str
+    type: std::string
+    initial_value: '""'
   - id: guest_wifi_qr
     type: std::string
     initial_value: '"WIFI:S:;T:WPA;P:;;"'
@@ -955,6 +958,13 @@ api:
                id(selected_media_id) = entity_id;
             }
         - script.execute: update_media_ui
+    - service: set_media_options
+      variables:
+        options_str: string
+      then:
+        - lambda: |-
+            id(media_options_str) = options_str;
+            lv_dropdown_set_options(id(media_selector), id(media_options_str).c_str());
     - service: set_qr
       variables:
         qr_text: string
@@ -1106,6 +1116,10 @@ sensor:
               if (x > -75) return std::string("\U000F05A7");
               if (x > -85) return std::string("\U000F05A6");
               return std::string("\U000F05A5");
+            text_color: !lambda |-
+              if (x > -60) return id(col_text_secondary);
+              if (x > -75) return id(col_yellow);
+              return id(col_red);
 ################################################################################
 # Fonts & Colors
 ################################################################################
@@ -1228,6 +1242,8 @@ color:
     hex: "D97706"
   - id: col_green
     hex: "10B981"
+  - id: col_yellow
+    hex: "FBBF24"
 
   - id: col_red
     hex: "F87171"
@@ -2597,15 +2613,15 @@ lvgl:
                   text_color: col_text_primary
                   text: "Prévisions"
         - label:
-            x: 80
+            x: 40
             y: 120
             styles: style_section_heading
             text: "DEMAIN"
         - obj:
-            x: 80
+            x: 40
             y: 160
-            width: 300
-            height: 200
+            width: 720
+            height: 120
             bg_color: col_btn_off
             border_width: 2
             border_color: col_divider
@@ -2615,47 +2631,48 @@ lvgl:
             widgets:
               - label:
                   id: lbl_icon_demain
-                  align: CENTER
-                  y: -30
+                  align: LEFT_MID
+                  x: 40
+                  y: 0
                   text_font: font_icons_56
                   text_color: col_text_primary
                   text: "\U000F0590"
               - label:
-                  x: 20
-                  y: 140
+                  x: 200
+                  y: 40
                   text_font: font_forecast
                   text_color: col_red
                   text: "Max:"
               - label:
                   id: lbl_max_demain
-                  x: 80
-                  y: 140
+                  x: 280
+                  y: 40
                   text_font: font_forecast
                   text_color: col_text_primary
                   text: "--°C"
               - label:
-                  x: 160
-                  y: 140
+                  x: 420
+                  y: 40
                   text_font: font_forecast
                   text_color: col_blue
                   text: "Min:"
               - label:
                   id: lbl_min_demain
-                  x: 220
-                  y: 140
+                  x: 500
+                  y: 40
                   text_font: font_forecast
                   text_color: col_text_primary
                   text: "--°C"
         - label:
-            x: 420
-            y: 120
+            x: 40
+            y: 300
             styles: style_section_heading
             text: "APRÈS-DEMAIN"
         - obj:
-            x: 420
-            y: 160
-            width: 300
-            height: 200
+            x: 40
+            y: 340
+            width: 720
+            height: 120
             bg_color: col_btn_off
             border_width: 2
             border_color: col_divider
@@ -2665,34 +2682,35 @@ lvgl:
             widgets:
               - label:
                   id: lbl_icon_apres_demain
-                  align: CENTER
-                  y: -30
+                  align: LEFT_MID
+                  x: 40
+                  y: 0
                   text_font: font_icons_56
                   text_color: col_text_primary
                   text: "\U000F0590"
               - label:
-                  x: 20
-                  y: 140
+                  x: 200
+                  y: 40
                   text_font: font_forecast
                   text_color: col_red
                   text: "Max:"
               - label:
                   id: lbl_max_apres_demain
-                  x: 80
-                  y: 140
+                  x: 280
+                  y: 40
                   text_font: font_forecast
                   text_color: col_text_primary
                   text: "--°C"
               - label:
-                  x: 160
-                  y: 140
+                  x: 420
+                  y: 40
                   text_font: font_forecast
                   text_color: col_blue
                   text: "Min:"
               - label:
                   id: lbl_min_apres_demain
-                  x: 220
-                  y: 140
+                  x: 500
+                  y: 40
                   text_font: font_forecast
                   text_color: col_text_primary
                   text: "--°C"
@@ -3032,11 +3050,7 @@ lvgl:
                   y: 17
                   width: 350
                   height: 46
-                  symbol: "\U000F035D"
-                  options:
-                    - "Lecteur 1"
-                    - "Lecteur 2"
-                    - "Lecteur 3"
+                  options: ""
                   on_value:
                     - lambda: |-
                         if (x == 0) id(selected_media_id) = id(media_1_entity_id);
