@@ -25,7 +25,7 @@ The project uses a **Push Architecture**. The ESPHome device does not poll Home 
    - **Panel Device:** Select the ESPHome device.
    - **ESPHome Node Name:** The internal name (default is `entrance_panel`).
    - **Weather & Media:** Select your weather entity, outdoor temperature sensor, and up to 3 media players.
-   - **Guest Wi-Fi QR:** Enter your Wi-Fi credentials in the required format (e.g., `WIFI:S:MyNetwork;T:WPA;P:MyPassword;;`).
+   - **Guest Wi-Fi:** Enter your guest Wi-Fi SSID and password in their respective fields.
    - **Buttons 1-8:** Configure the entities, names, icons, and action types (light, script, or media_player) for the main dashboard buttons.
 5. Save and enable the automation. The screen will automatically sync its configuration on the next boot or immediately upon state changes.
 
@@ -58,6 +58,6 @@ Le projet utilise une **Architecture Push**. L'appareil ESPHome n'interroge pas 
    - **Panel Device :** Sélectionnez l'appareil ESPHome.
    - **ESPHome Node Name :** Le nom interne (par défaut `entrance_panel`).
    - **Météo & Médias :** Sélectionnez votre entité météo, votre capteur de température extérieure et jusqu'à 3 lecteurs multimédias.
-   - **QR Code Wi-Fi Invités :** Entrez vos identifiants Wi-Fi dans le format requis (ex: `WIFI:S:MonReseau;T:WPA;P:MonMotDePasse;;`).
+   - **Wi-Fi Invités :** Entrez le SSID et le mot de passe de votre réseau Wi-Fi invité dans leurs champs respectifs.
    - **Boutons 1-8 :** Configurez les entités, noms, icônes et types d'action (lumière, script ou lecteur média) pour les boutons principaux du tableau de bord.
 5. Sauvegardez et activez l'automatisation. L'écran synchronisera automatiquement sa configuration au prochain démarrage ou immédiatement lors de changements d'état.

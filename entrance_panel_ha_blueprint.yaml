@@ -210,6 +210,24 @@ blueprint:
       selector:
         entity:
           domain: media_player
+    media_player_1_name:
+      name: Media Player 1 Name
+      description: 'Name to display in the dropdown list for Media Player 1'
+      default: "Lecteur 1"
+      selector:
+        text:
+    media_player_2_name:
+      name: Media Player 2 Name
+      description: 'Name to display in the dropdown list for Media Player 2'
+      default: "Lecteur 2"
+      selector:
+        text:
+    media_player_3_name:
+      name: Media Player 3 Name
+      description: 'Name to display in the dropdown list for Media Player 3'
+      default: "Lecteur 3"
+      selector:
+        text:
     guest_wifi_ssid:
       name: Guest Wi-Fi SSID
       description: 'The network name (SSID)'
@@ -244,6 +262,9 @@ variables:
   media_player_1: !input media_player_1
   media_player_2: !input media_player_2
   media_player_3: !input media_player_3
+  media_player_1_name: !input media_player_1_name
+  media_player_2_name: !input media_player_2_name
+  media_player_3_name: !input media_player_3_name
 
 trigger:
   - platform: homeassistant
@@ -336,6 +357,9 @@ action:
               icon: !input button_8_icon
               action: !input button_8_type
               entity: !input button_8_entity
+          - service: "esphome.{{ panel_name }}_set_media_options"
+            data:
+              options_str: "{{ media_player_1_name }}\n{{ media_player_2_name }}\n{{ media_player_3_name }}"
           - service: "esphome.{{ panel_name }}_set_qr"
             data:
               qr_text: "WIFI:S:{{ guest_wifi_ssid }};T:WPA;P:{{ guest_wifi_pwd }};;"
