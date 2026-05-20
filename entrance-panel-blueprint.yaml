@@ -78,6 +78,9 @@ globals:
   - id: sleep_delay_s
     type: int
     initial_value: '60'
+  - id: auto_return_delay_s
+    type: int
+    initial_value: '10'
   - id: selected_light_id
     type: std::string
     initial_value: '""'
@@ -657,6 +660,10 @@ script:
           else if (id(sleep_delay_s) == 300) lv_obj_add_state(id(btn_delay_5m), LV_STATE_CHECKED);
           else if (id(sleep_delay_s) == 0) lv_obj_add_state(id(btn_delay_always), LV_STATE_CHECKED);
 
+          if (id(auto_return_delay_s) == 10) lv_obj_add_state(id(btn_auto_10s), LV_STATE_CHECKED);
+          else if (id(auto_return_delay_s) == 30) lv_obj_add_state(id(btn_auto_30s), LV_STATE_CHECKED);
+          else if (id(auto_return_delay_s) == 0) lv_obj_add_state(id(btn_auto_jamais), LV_STATE_CHECKED);
+
           if (id(screensaver_mode) == 0) lv_obj_add_state(id(btn_screensaver_black), LV_STATE_CHECKED);
           else if (id(screensaver_mode) == 1) lv_obj_add_state(id(btn_screensaver_clock), LV_STATE_CHECKED);
 
@@ -692,10 +699,14 @@ script:
   - id: auto_return_timer
     mode: restart
     then:
-      - delay: 10s
-      - lambda: 'id(current_page) = 0;'
-      - script.execute: sync_button_states
-      - lvgl.page.show: main_page
+      - if:
+          condition:
+            lambda: 'return id(auto_return_delay_s) > 0;'
+          then:
+            - delay: !lambda 'return id(auto_return_delay_s) * 1000;'
+            - lambda: 'id(current_page) = 0;'
+            - script.execute: sync_button_states
+            - lvgl.page.show: main_page
   - id: apply_brightness
     mode: restart
     then:
@@ -2310,11 +2321,79 @@ lvgl:
             x: 40
             y: 180
             styles: style_section_heading
+            text: "RETOUR À L'ACCUEIL (SECONDES)"
+        - button:
+            id: btn_auto_10s
+            x: 40
+            y: 210
+            width: 200
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "10 s"
+            on_short_click:
+              - lambda: |-
+                  id(auto_return_delay_s) = 10;
+                  lv_obj_add_state(id(btn_auto_10s), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_30s), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_jamais), LV_STATE_CHECKED);
+              - script.execute: auto_return_timer
+        - button:
+            id: btn_auto_30s
+            x: 260
+            y: 210
+            width: 200
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "30 s"
+            on_short_click:
+              - lambda: |-
+                  id(auto_return_delay_s) = 30;
+                  lv_obj_add_state(id(btn_auto_30s), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_10s), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_jamais), LV_STATE_CHECKED);
+              - script.execute: auto_return_timer
+        - button:
+            id: btn_auto_jamais
+            x: 480
+            y: 210
+            width: 250
+            height: 50
+            styles: style_scene_btn
+            checkable: true
+            checked:
+              styles: style_setting_btn_checked
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Jamais"
+            on_short_click:
+              - lambda: |-
+                  id(auto_return_delay_s) = 0;
+                  lv_obj_add_state(id(btn_auto_jamais), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_10s), LV_STATE_CHECKED);
+                  lv_obj_clear_state(id(btn_auto_30s), LV_STATE_CHECKED);
+              - script.stop: auto_return_timer
+        - label:
+            x: 40
+            y: 270
+            styles: style_section_heading
             text: "COMPORTEMENT DE LA VEILLE"
         - button:
             id: btn_screensaver_black
             x: 40
-            y: 210
+            y: 300
             width: 310
             height: 50
             styles: style_scene_btn
@@ -2333,7 +2412,7 @@ lvgl:
         - button:
             id: btn_screensaver_clock
             x: 370
-            y: 210
+            y: 300
             width: 310
             height: 50
             styles: style_scene_btn
@@ -2351,13 +2430,13 @@ lvgl:
                   lv_obj_clear_state(id(btn_screensaver_black), LV_STATE_CHECKED);
         - label:
             x: 40
-            y: 270
+            y: 360
             styles: style_section_heading
             text: "AFFICHER LA MUSIQUE SUR LA VEILLE"
         - button:
             id: btn_screensaver_media_yes
             x: 40
-            y: 300
+            y: 390
             width: 310
             height: 50
             styles: style_scene_btn
@@ -2376,7 +2455,7 @@ lvgl:
         - button:
             id: btn_screensaver_media_no
             x: 370
-            y: 300
+            y: 390
             width: 310
             height: 50
             styles: style_scene_btn
@@ -2394,13 +2473,13 @@ lvgl:
                   lv_obj_clear_state(id(btn_screensaver_media_yes), LV_STATE_CHECKED);
         - label:
             x: 40
-            y: 370
+            y: 450
             styles: style_section_heading
             text: "TAILLE DE L'HORLOGE (VEILLE)"
         - button:
             id: btn_clock_size_small
             x: 40
-            y: 400
+            y: 480
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2421,7 +2500,7 @@ lvgl:
         - button:
             id: btn_clock_size_medium
             x: 280
-            y: 400
+            y: 480
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2442,7 +2521,7 @@ lvgl:
         - button:
             id: btn_clock_size_large
             x: 520
-            y: 400
+            y: 480
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2462,13 +2541,13 @@ lvgl:
                   lv_obj_set_style_text_font(id(lbl_screensaver_clock), id(font_clock_xlarge), 0);
         - label:
             x: 40
-            y: 470
+            y: 540
             styles: style_section_heading
             text: "COULEUR DES BOUTONS ACTIFS"
         - button:
             id: btn_color_orange
             x: 40
-            y: 500
+            y: 570
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2496,7 +2575,7 @@ lvgl:
         - button:
             id: btn_color_blue
             x: 280
-            y: 500
+            y: 570
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2524,7 +2603,7 @@ lvgl:
         - button:
             id: btn_color_green
             x: 520
-            y: 500
+            y: 570
             width: 220
             height: 50
             styles: style_scene_btn
@@ -2551,13 +2630,13 @@ lvgl:
                   lv_obj_clear_state(id(btn_color_blue), LV_STATE_CHECKED);
         - label:
             x: 40
-            y: 570
+            y: 630
             styles: style_section_heading
             text: "INFORMATIONS RÉSEAU"
         - label:
             id: lbl_ip_address
             x: 40
-            y: 600
+            y: 660
             text_font: font_btn
             text_color: col_text_primary
             text: "IP : En attente..."
