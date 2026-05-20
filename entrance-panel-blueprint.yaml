@@ -964,7 +964,7 @@ api:
       then:
         - lambda: |-
             id(media_options_str) = options_str;
-            lv_dropdown_set_options(id(media_selector), id(media_options_str).c_str());
+            lv_dropdown_set_options(id(media_selector)->obj, id(media_options_str).c_str());
     - service: set_qr
       variables:
         qr_text: string
